@@ -21,7 +21,7 @@ function sendSecurePing() {
     const primes = [982451653, 15485863, 32416190071, 533000401];
     activePrime = primes[Math.floor(Math.random() * primes.length)];
 
-    // Broadcasting payload data packets globally via cloud websockets
+    // Broadcasting payload data packets globally via cloud websocketsf
     socket.emit('global_secure_ping', { prime: activePrime, targetId: targetId });
 
     // Instantly slide to validation layout
@@ -43,9 +43,14 @@ socket.on('global_incoming_ping', (data) => {
 // Processing SHA-256 Local Validation Handshake
 async function verifyPrimeAndConnect() {
     const userInputPrime = document.getElementById('prime-input').value;
-    const userInputKey = document.getElementById('secret-key').value;
+    let userInputKey = document.getElementById('secret-key').value;
 
-    if(!userInputKey) return alert("Bhai, Shared Private Key dalo validation ke liye!");
+    // 💡 THE FIX: Agar key nahi mili, toh screen par popup de kar maang lo!
+    if(!userInputKey) {
+        userInputKey = prompt("🔒 Secure Tunnel Unlock karne ke liye apni Shared Private Key dalo:");
+    }
+
+    if(!userInputKey) return alert("Bhai, bina Private Key ke verification nahi hoga!");
     if(parseInt(userInputPrime) !== activePrime) return alert("Security Handshake Failed! Verification prime mismatch.");
 
     // Dynamic encryption signature verification using SHA-256
