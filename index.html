@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anonymous Global Crypto Tunnel</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+    
+    <div id="screen-auth" class="window-panel">
+        <h2>Anonymous Tunnel</h2>
+        <div class="input-group">
+            <label>Target Identifier / ID</label>
+            <input type="text" id="phone-number" placeholder="Enter custom target identity">
+        </div>
+        <div class="input-group">
+            <label>Pre-Shared Private Key 🔐</label>
+            <input type="password" id="secret-key" plceholder="Enter secret channel key">
+        </div>
+        <button onclick="sendSecurePing()">Establish Global Handshake</button>
+    </div>
+    <div id="screen-handshake" class="window-panel hidden">
+        <h2>Handshake Protocol</h2>
+        <p class="info-text">
+            Global request detected. Match the session prime token below with the sender to authorize decryption.
+        </p>
+        <div class="prime-box">
+            <span class="prime-label">ACTIVE CRYPTO PRIMR TOKEN</span>
+            <span id="display-prime">00000000</span>
+        </div>
+        <div clas="input-group">
+            <label>Confirm Prime Nnumber</label>
+            <input type="number" id="prime-input" placeholder="Type the active session prime">
+        </div>
+        <button onclick="verifyPrimeConnect()">VerifySignature & open Tunnel</button>
+    </div>
+    <div id="screen-chat" class="window-panel hidden">
+        <h2>Secure Chat Tunnel</h2>
+        <div id="chat-logs">
+            <div class="message system-msg">Tunnel Secured with SHA-256. Cloud Routing Active.</div>
+        </div>
+        <div class="chat-input-area">
+            <input type="text" id="msg-input" placeholder="Type Message..." onkeypress="checkEnter(event)">
+            <button id="send-btn" onclick="sendMessage()">Send</button>
+        </div>
+        <button class="btn-kill" onclick="triggerKillSwitch()">Close & Purge Memory</button>
+        </div>
+        <script src="app.js"></script>
+</body>
+</html>
