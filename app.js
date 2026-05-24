@@ -41,7 +41,7 @@ socket.on('global_incoming_ping', (data) => {
 });
 
 // Processing SHA-256 Local Validation Handshake
-async function verifyPrimeAndConnect() {
+async function verifyPrimeConnect() {
     const userInputPrime = document.getElementById('prime-input').value;
     let userInputKey = document.getElementById('secret-key').value;
 
