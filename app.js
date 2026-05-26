@@ -36,7 +36,7 @@ socket.on('global_incoming_ping', (data) => {
 });
 
 // 2. WebRTC Setup after Password Verification
-async function verifyPrimeAndConnect() {
+async function verifyPrimeConnect() {
     const userInputPrime = document.getElementById('prime-input').value;
     let userInputKey = document.getElementById('secret-key')?.value || prompt("🔒 Enter Pre-Shared Private Key:");
 
