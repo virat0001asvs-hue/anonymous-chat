@@ -35,5 +35,24 @@ button:hover { box-shadow: 0 4px 15px var(--neon-shadow); }
 .recv-msg { background: rgba(255,255,255,0.06); color: #f1f5f9; align-self: flex-start; border-bottom-left-radius: 2px; border: 1px solid var(--glass-border); }
 .btn-kill { background: var(--danger-red); color: white; margin-top: 10px; }
 
-/* Media Preview Styling */
-.media-content { max-width: 100%; border-radius: 8px; margin-top: 5px; border: 1px solid rgba(255,255,255,0.2); }
+/*🎥 Media Button Styling*/
+.icon-btn { background: rgba(255,255,255,0.05); padding: 0 12px; border-radius: 12px; border: 1px solid var(--glass-border); font-size: 2.3rem; display: flex; align-items: center; justify-content: center; width: auto;}
+.icon-btn:hover { background: rgba(255,255,255,0.15); box-shadow: 0 0 10px var(--neon-cyan);}
+
+/*📸 Media Preview Styling (Clickable Images) */
+.media-content { max-width: 100%; border-radius: 8px; margin-top: 5px; border: 1px solid rgba(255, 255, 255, 0.2); cursor: pointer; transition: 0.2s ease;}
+.media-content:hover { opacity: 0.8; filter: brightness(1.1);}
+
+/*🔍 Image Fullscreen Model Styling*/
+.model { display: flex; justify-content: center; align-items: center; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); backdrop-filter: blur(5px);}
+.model-content { max-width: 90%; max-height: 90%; border-radius: 12px; box-shadow: 0 0 25px var(--neon-cyan); animation: zoomIn 0.3s ease; }
+.close-modal { position: absolute; top: 20px; right: 30px; color: #94a3b8; font-size: 40px; font-weight: bold; cursor: pointer; transition: 0.2s ease;}
+.close-modal:hover { color: var(--danger-red);}
+
+/*📺 The pro floating video container */
+#video-container { position: fixed; top: 20px; left: 50%; transform: translateY(-50%); width: 600px; height: auto; background: #000; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.9); z-index: 2000; overflow: hidden; border: 1px solid var(--neon-cyan); animation: zoomIn 0.3s ease;}
+#remote-video { width: 100%; height: 100%; object-fit: cover; background: #111;}
+#local-video { position: absolute; bottom: 20px; right: 20px; width: 100px; height: 140px; object-fit: cover; border-radius: 12px; border: 2px solid-white; box-shadow: 0 40px 10px rgba(0,0,0,0.5); background: #222;}
+#end-call-btn { position: absolute; bottom: 20px; left: 20px; width: auto; padding: 10px 20px; background: var(--danger-red); color: white; border-radius: 20px; font-weight: bold; box-shadow: 0 4px 15px rgba(244, 63, 94, 0.4);}
+
+@keyframes zoomIn { from { transform: scale(0.8); opacity: 0;} to {transform: scale(1); opacity: 1;}}

@@ -37,15 +37,30 @@
     <div id="screen-chat" class="window-panel hidden">
         <h2>P2P Encrypted Chat</h2>
         <div id="chat-logs">
-            <div class="message system-msg">Tunnel Secured with WebRTC DTLS. Peer-to-Peer Active.</div>
+            <div class="message system-msg">Tunnel Secured. E2EE Active.</div>
         </div>
         <div class="chat-input-area">
-            <label for="file-upload" class="attach-btn">📎</label>
+            <button onclick="startCall(true)" class="icon-btn" title="Video Call">🎥</button>
+            <button onclick="startCall(false)" class="icon-btn" title="Voice Call">📞</button>
+            
+            <label for="file-upload" class="attach-btn" title="Send Media">📎</label>
             <input type="file" id="file-upload" class="hidden" accept="image/*,video/*">
+            
             <input type="text" id="msg-input" placeholder="Type..." onkeypress="checkEnter(event)">
             <button id="send-btn" onclick="sendMessage()">Send</button>
         </div>
         <button class="btn-kill" onclick="triggerKillSwitch()">Purge Memory</button>
+    </div>
+
+    <div id="video-container" class="hidden">
+        <video id="remote-video" autoplay playsinline></video>
+        <video id="local-video" autoplay playsinline muted></video>
+        <button onclick="endCall()" id="end-call-btn">🔴 End Call</button>
+    </div>
+
+    <div id="image-modal" class="modal hidden" onclick="closeModal()">
+        <span class="close-modal">&times;</span>
+        <img class="modal-content" id="modal-img">
     </div>
 
     <script src="app.js"></script>
