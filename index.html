@@ -16,59 +16,63 @@
             --success-green: #22c55e; 
         }
 
-        body { background: var(--bg-gradient); color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; touch-action: manipulation; }
+        /* FIX: 100dvh for Dynamic Mobile Viewport */
+        body { background: var(--bg-gradient); color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100dvh; margin: 0; overflow: hidden; touch-action: manipulation; }
 
-        .window-panel { background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 20px; padding: 1.5rem; width: 92%; max-width: 450px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); display: flex; flex-direction: column; box-sizing: border-box; }
+        .window-panel { background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 20px; padding: 1.2rem; width: 92%; max-width: 450px; max-height: 98dvh; box-shadow: 0 20px 40px rgba(0,0,0,0.5); display: flex; flex-direction: column; box-sizing: border-box; }
         .hidden { display: none !important; }
 
-        h2 { margin-top: 0; font-size: 1.2rem; text-align: center; color: #fff; margin-bottom: 1rem; }
+        h2 { margin-top: 0; font-size: 1.2rem; text-align: center; color: #fff; margin-bottom: 1rem; flex-shrink: 0; }
         .input-group { margin-bottom: 1rem; }
         label { display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.4rem; font-weight: 600; text-transform: uppercase; }
         input:not([type="file"]) { width: 100%; padding: 14px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.4); color: #fff; box-sizing: border-box; outline: none; font-size: 1rem; }
         input:focus { border-color: var(--neon-cyan); }
 
-        .primary-btn, .btn-kill { width: 100%; padding: 14px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 1rem; transition: 0.2s; color: white; margin-top: 5px; }
-        .primary-btn { background: var(--neon-cyan); }
-        .btn-kill { background: rgba(239, 68, 68, 0.2); border: 1px solid var(--danger-red); color: var(--danger-red); margin-top: 15px; }
+        .primary-btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 1rem; transition: 0.2s; color: white; margin-top: 5px; background: var(--neon-cyan); }
+        
+        /* FIX: flex-shrink: 0 protects the button from hiding */
+        .btn-kill { width: 100%; padding: 14px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 1rem; transition: 0.2s; color: var(--danger-red); margin-top: 15px; margin-bottom: 5px; background: rgba(239, 68, 68, 0.2); border: 1px solid var(--danger-red); flex-shrink: 0; }
 
         .prime-box { background: rgba(0,0,0,0.5); padding: 15px; border-radius: 12px; text-align: center; margin-bottom: 1.5rem; border: 1px solid var(--neon-cyan); }
         .prime-label { color: var(--neon-cyan); font-size: 0.7rem; display: block; margin-bottom: 5px; }
         #display-prime { font-size: 1.8rem; font-weight: bold; letter-spacing: 2px; }
 
         /* Mobile Chat Layout */
-        #chat-logs { flex-grow: 1; overflow-y: auto; background: rgba(0,0,0,0.3); border-radius: 12px; padding: 10px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--glass-border); scroll-behavior: smooth; }
-        .chat-input-area { display: flex; gap: 8px; align-items: center; width: 100%; justify-content: space-between; }
+        #chat-logs { flex-grow: 1; overflow-y: auto; background: rgba(0,0,0,0.3); border-radius: 12px; padding: 10px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--glass-border); scroll-behavior: smooth; }
+        
+        /* FIX: Protect Input area from shrinking */
+        .chat-input-area { display: flex; gap: 8px; align-items: center; width: 100%; justify-content: space-between; flex-shrink: 0; }
 
-        .icon-btn, #send-btn { width: 48px; height: 48px; min-width: 48px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.08); display: flex; justify-content: center; align-items: center; cursor: pointer; font-size: 1.3rem; color: white; margin: 0; padding: 0; box-sizing: border-box; }
+        .icon-btn, #send-btn { width: 45px; height: 45px; min-width: 45px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.08); display: flex; justify-content: center; align-items: center; cursor: pointer; font-size: 1.2rem; color: white; margin: 0; padding: 0; box-sizing: border-box; }
         #send-btn { background: var(--neon-cyan); border: none; }
-        #msg-input { flex-grow: 1; height: 48px; border-radius: 24px; padding: 0 15px; width: 10px; }
+        #msg-input { flex-grow: 1; height: 45px; border-radius: 24px; padding: 0 15px; width: 10px; }
 
         .message { padding: 10px 14px; border-radius: 14px; max-width: 80%; font-size: 0.95rem; word-wrap: break-word; }
-        .system-msg { background: transparent; color: #64748b; align-self: center; font-size: 0.8rem; text-align: center; border: none; }
+        .system-msg { background: rgba(0,0,0,0.5); color: #94a3b8; align-self: center; font-size: 0.85rem; text-align: center; border: 1px solid var(--glass-border); font-weight: bold; }
         .sent-msg { background: var(--neon-cyan); color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
         .recv-msg { background: rgba(255,255,255,0.1); color: #fff; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid var(--glass-border); }
         .media-content { max-width: 100%; border-radius: 8px; margin-top: 5px; cursor: zoom-in; }
 
         /* Fullscreen Native Video Call UI */
-        #video-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #111; z-index: 2000; overflow: hidden; }
+        #video-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; background: #111; z-index: 2000; overflow: hidden; }
         #remote-video { width: 100%; height: 100%; object-fit: cover; }
-        #local-video { position: absolute; top: 30px; right: 20px; width: 110px; height: 150px; object-fit: cover; border-radius: 12px; border: 2px solid rgba(255,255,255,0.5); box-shadow: 0 10px 30px rgba(0,0,0,0.8); z-index: 2001; background: #222; cursor: grab; touch-action: none; }
+        #local-video { position: absolute; top: 30px; right: 20px; width: 100px; height: 140px; object-fit: cover; border-radius: 12px; border: 2px solid rgba(255,255,255,0.5); box-shadow: 0 10px 30px rgba(0,0,0,0.8); z-index: 2001; background: #222; cursor: grab; touch-action: none; }
         #local-video:active { cursor: grabbing; }
 
-        .call-controls { position: absolute; bottom: 50px; width: 100%; display: flex; justify-content: center; z-index: 2002; }
+        .call-controls { position: absolute; bottom: 40px; width: 100%; display: flex; justify-content: center; z-index: 2002; }
         #end-call-btn { background: var(--danger-red); color: white; padding: 16px 40px; border-radius: 30px; border: none; font-size: 1.1rem; font-weight: bold; box-shadow: 0 10px 20px rgba(239, 68, 68, 0.4); cursor: pointer; }
 
         /* Incoming Call Modal */
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 3000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(8px); }
         .call-box { background: #0f172a; padding: 2.5rem; border-radius: 24px; text-align: center; border: 1px solid rgba(255,255,255,0.1); width: 85%; max-width: 350px; box-shadow: 0 0 50px rgba(14, 165, 233, 0.3); }
-        #call-title { color: white; font-size: 1.3rem; margin-bottom: 20px; }
+        #call-title { color: white; font-size: 1.2rem; margin-bottom: 20px; }
         .call-actions { display: flex; gap: 15px; }
-        .btn-accept, .btn-reject { flex: 1; padding: 15px; border-radius: 15px; font-weight: bold; border: none; font-size: 1rem; color: white; cursor: pointer; }
+        .btn-accept, .btn-reject { flex: 1; padding: 15px; border-radius: 12px; font-weight: bold; border: none; font-size: 1rem; color: white; cursor: pointer; }
         .btn-accept { background: var(--success-green); }
         .btn-reject { background: var(--danger-red); }
 
-        #image-modal img { max-width: 95vw; max-height: 90vh; border-radius: 12px; object-fit: contain; }
-        .close-modal { position: absolute; top: 20px; right: 20px; color: white; font-size: 40px; cursor: pointer; z-index: 3001; line-height: 1; }
+        #image-modal img { max-width: 95vw; max-height: 90dvh; border-radius: 12px; object-fit: contain; }
+        .close-modal { position: absolute; top: 15px; right: 15px; color: white; font-size: 40px; cursor: pointer; z-index: 3001; line-height: 1; }
     </style>
 </head>
 <body>
@@ -98,7 +102,7 @@
         <button onclick="window.verifyPrimeConnect()" class="primary-btn">Establish Tunnel</button>
     </div>
 
-    <div id="screen-chat" class="window-panel hidden" style="height: 100vh; width: 100vw; border-radius: 0; max-width: 100%; border: none;">
+    <div id="screen-chat" class="window-panel hidden" style="height: 100dvh; width: 100vw; border-radius: 0; max-width: 100%; border: none; padding: 1rem;">
         <h2>E2EE Network Live</h2>
         <div id="chat-logs">
             <div class="message system-msg" id="status-msg">⌛ Connecting Tunnel... Waiting for peer.</div>
@@ -142,11 +146,10 @@
         let activePrime = null, isInitiator = false;
         let peerConnection, dataChannel, localStream;
         let currentCallType = null; 
-        let signalQueue = []; // Fixed: Buffers the connection signal so messages don't fail
+        let signalQueue = []; 
 
         const iceConfiguration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] };
 
-        // 1. Authentication Logic
         window.sendSecurePing = function() {
             isInitiator = true;
             const targetId = document.getElementById('phone-number').value.trim();
@@ -179,7 +182,6 @@
             initWebRTC();
         };
 
-        // 2. WebRTC Core Engine
         function initWebRTC() {
             peerConnection = new RTCPeerConnection(iceConfiguration);
 
@@ -254,7 +256,6 @@
             processSignal(data);
         });
 
-        // 3. Media & Call Routing
         window.requestCall = async function(videoEnabled) {
             if(!dataChannel || dataChannel.readyState !== 'open') return window.appendMsg("❌ Chat must connect first!", "system-msg");
             currentCallType = videoEnabled;
@@ -306,7 +307,6 @@
             }
         };
 
-        // Draggable Local Video (Mouse & Touch)
         const localVid = document.getElementById('local-video');
         let isDragging = false, startX, startY, currentX = 0, currentY = 0;
         function dragStart(e) {
@@ -326,7 +326,6 @@
         window.addEventListener('mouseup', dragEnd); window.addEventListener('touchend', dragEnd);
         window.addEventListener('mousemove', drag); window.addEventListener('touchmove', drag, {passive: false});
 
-        // 4. Chat & File Sharing Channel
         function setupDataChannel() {
             dataChannel.onopen = () => {
                 const status = document.getElementById('status-msg');
