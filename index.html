@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>WebRTC Elite Tunnel</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+    <style>
+        :root { 
+            --bg-gradient: linear-gradient(135deg, #050811 0%, #0b1329 100%); 
+            --glass-bg: rgba(255, 255, 255, 0.04); 
+            --glass-border: rgba(255, 255, 255, 0.1); 
+            --neon-cyan: #0ea5e9; 
+            --danger-red: #ef4444; 
+            --success-green: #22c55e; 
+        }
+
+        body { background: var(--bg-gradient); color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; touch-action: manipulation; }
+
+        .window-panel { background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 20px; padding: 1.5rem; width: 92%; max-width: 450px; box-shadow: 0 20px 40px rgba(0,0,0,0.5); display: flex; flex-direction: column; box-sizing: border-box; }
+        .hidden { display: none !important; }
+
+        h2 { margin-top: 0; font-size: 1.2rem; text-align: center; color: #fff; margin-bottom: 1rem; }
+        .input-group { margin-bottom: 1rem; }
+        label { display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.4rem; font-weight: 600; text-transform: uppercase; }
+        input:not([type="file"]) { width: 100%; padding: 14px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.4); color: #fff; box-sizing: border-box; outline: none; font-size: 1rem; }
+        input:focus { border-color: var(--neon-cyan); }
+
+        .primary-btn, .btn-kill { width: 100%; padding: 14px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 1rem; transition: 0.2s; color: white; margin-top: 5px; }
+        .primary-btn { background: var(--neon-cyan); }
+        .btn-kill { background: rgba(239, 68, 68, 0.2); border: 1px solid var(--danger-red); color: var(--danger-red); margin-top: 15px; }
+
+        .prime-box { background: rgba(0,0,0,0.5); padding: 15px; border-radius: 12px; text-align: center; margin-bottom: 1.5rem; border: 1px solid var(--neon-cyan); }
+        .prime-label { color: var(--neon-cyan); font-size: 0.7rem; display: block; margin-bottom: 5px; }
+        #display-prime { font-size: 1.8rem; font-weight: bold; letter-spacing: 2px; }
+
+        /* Mobile Chat Layout */
+        #chat-logs { flex-grow: 1; overflow-y: auto; background: rgba(0,0,0,0.3); border-radius: 12px; padding: 10px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--glass-border); scroll-behavior: smooth; }
+        .chat-input-area { display: flex; gap: 8px; align-items: center; width: 100%; justify-content: space-between; }
+
+        .icon-btn, #send-btn { width: 48px; height: 48px; min-width: 48px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.08); display: flex; justify-content: center; align-items: center; cursor: pointer; font-size: 1.3rem; color: white; margin: 0; padding: 0; box-sizing: border-box; }
+        #send-btn { background: var(--neon-cyan); border: none; }
+        #msg-input { flex-grow: 1; height: 48px; border-radius: 24px; padding: 0 15px; width: 10px; }
+
+        .message { padding: 10px 14px; border-radius: 14px; max-width: 80%; font-size: 0.95rem; word-wrap: break-word; }
+        .system-msg { background: transparent; color: #64748b; align-self: center; font-size: 0.8rem; text-align: center; border: none; }
+        .sent-msg { background: var(--neon-cyan); color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .recv-msg { background: rgba(255,255,255,0.1); color: #fff; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid var(--glass-border); }
+        .media-content { max-width: 100%; border-radius: 8px; margin-top: 5px; cursor: zoom-in; }
+
+        /* Fullscreen Native Video Call UI */
+        #video-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #111; z-index: 2000; overflow: hidden; }
+        #remote-video { width: 100%; height: 100%; object-fit: cover; }
+        #local-video { position: absolute; top: 30px; right: 20px; width: 110px; height: 150px; object-fit: cover; border-radius: 12px; border: 2px solid rgba(255,255,255,0.5); box-shadow: 0 10px 30px rgba(0,0,0,0.8); z-index: 2001; background: #222; cursor: grab; touch-action: none; }
+        #local-video:active { cursor: grabbing; }
+
+        .call-controls { position: absolute; bottom: 50px; width: 100%; display: flex; justify-content: center; z-index: 2002; }
+        #end-call-btn { background: var(--danger-red); color: white; padding: 16px 40px; border-radius: 30px; border: none; font-size: 1.1rem; font-weight: bold; box-shadow: 0 10px 20px rgba(239, 68, 68, 0.4); cursor: pointer; }
+
+        /* Incoming Call Modal */
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 3000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(8px); }
+        .call-box { background: #0f172a; padding: 2.5rem; border-radius: 24px; text-align: center; border: 1px solid rgba(255,255,255,0.1); width: 85%; max-width: 350px; box-shadow: 0 0 50px rgba(14, 165, 233, 0.3); }
+        #call-title { color: white; font-size: 1.3rem; margin-bottom: 20px; }
+        .call-actions { display: flex; gap: 15px; }
+        .btn-accept, .btn-reject { flex: 1; padding: 15px; border-radius: 15px; font-weight: bold; border: none; font-size: 1rem; color: white; cursor: pointer; }
+        .btn-accept { background: var(--success-green); }
+        .btn-reject { background: var(--danger-red); }
+
+        #image-modal img { max-width: 95vw; max-height: 90vh; border-radius: 12px; object-fit: contain; }
+        .close-modal { position: absolute; top: 20px; right: 20px; color: white; font-size: 40px; cursor: pointer; z-index: 3001; line-height: 1; }
+    </style>
+</head>
+<body>
+    <div id="screen-auth" class="window-panel">
+        <h2>WebRTC Tunnel</h2>
+        <div class="input-group">
+            <label>Target Identifier</label>
+            <input type="text" id="phone-number" placeholder="Enter target ID">
+        </div>
+        <div class="input-group">
+            <label>Private Key 🔐</label>
+            <input type="password" id="secret-key" placeholder="Enter secret key">
+        </div>
+        <button onclick="window.sendSecurePing()" class="primary-btn">Initiate P2P Handshake</button>
+    </div>
+
+    <div id="screen-handshake" class="window-panel hidden">
+        <h2>Handshake Protocol</h2>
+        <div class="prime-box">
+            <span class="prime-label">ACTIVE TOKEN</span>
+            <span id="display-prime">00000000</span>
+        </div>
+        <div class="input-group">
+            <label>Confirm Prime Number</label>
+            <input type="number" id="prime-input" placeholder="Type the prime">
+        </div>
+        <button onclick="window.verifyPrimeConnect()" class="primary-btn">Establish Tunnel</button>
+    </div>
+
+    <div id="screen-chat" class="window-panel hidden" style="height: 100vh; width: 100vw; border-radius: 0; max-width: 100%; border: none;">
+        <h2>E2EE Network Live</h2>
+        <div id="chat-logs">
+            <div class="message system-msg" id="status-msg">⌛ Connecting Tunnel... Waiting for peer.</div>
+        </div>
+        <div class="chat-input-area">
+            <button onclick="window.requestCall(true)" class="icon-btn" title="Video Call">🎥</button>
+            <button onclick="window.requestCall(false)" class="icon-btn" title="Voice Call">📞</button>
+            <label for="file-upload" class="icon-btn" title="Send Media" style="display:flex;">📎</label>
+            <input type="file" id="file-upload" class="hidden" accept="image/*,video/*" onchange="window.sendMessage()">
+            <input type="text" id="msg-input" placeholder="Type..." onkeypress="window.checkEnter(event)">
+            <button id="send-btn" onclick="window.sendMessage()">➤</button>
+        </div>
+        <button class="btn-kill" onclick="window.triggerKillSwitch()">Purge Connection</button>
+    </div>
+
+    <div id="video-container" class="hidden">
+        <video id="remote-video" autoplay playsinline></video>
+        <video id="local-video" autoplay playsinline muted></video>
+        <div class="call-controls">
+            <button onclick="window.endCall()" id="end-call-btn">🔴 End Call</button>
+        </div>
+    </div>
+
+    <div id="incoming-call-modal" class="modal hidden">
+        <div class="modal-content call-box">
+            <h3 id="call-title">Incoming Call...</h3>
+            <div class="call-actions">
+                <button onclick="window.acceptCall()" class="btn-accept">📞 Answer</button>
+                <button onclick="window.rejectCall()" class="btn-reject">🔴 Decline</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="image-modal" class="modal hidden" onclick="window.closeModal()">
+        <span class="close-modal">&times;</span>
+        <img class="modal-content" id="modal-img">
+    </div>
+
+    <script>
+        const socket = io(window.location.origin); 
+        let activePrime = null, isInitiator = false;
+        let peerConnection, dataChannel, localStream;
+        let currentCallType = null; 
+        let signalQueue = []; // Fixed: Buffers the connection signal so messages don't fail
+
+        const iceConfiguration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] };
+
+        // 1. Authentication Logic
+        window.sendSecurePing = function() {
+            isInitiator = true;
+            const targetId = document.getElementById('phone-number').value.trim();
+            if(!targetId) return alert("Target ID required!");
+
+            activePrime = [982451653, 15485863, 32416190071][Math.floor(Math.random() * 3)];
+            socket.emit('global_secure_ping', { prime: activePrime, targetId: targetId });
+
+            document.getElementById('screen-auth').classList.add('hidden');
+            document.getElementById('screen-handshake').classList.remove('hidden');
+            document.getElementById('display-prime').innerText = activePrime;
+        };
+
+        socket.on('global_incoming_ping', (data) => {
+            activePrime = data.prime;
+            document.getElementById('screen-auth').classList.add('hidden');
+            document.getElementById('screen-handshake').classList.remove('hidden');
+            document.getElementById('display-prime').innerText = data.prime;
+        });
+
+        window.verifyPrimeConnect = async function() {
+            const userInputPrime = document.getElementById('prime-input').value;
+            let userInputKey = document.getElementById('secret-key')?.value;
+
+            if(!userInputKey || parseInt(userInputPrime) !== activePrime) return alert("Handshake Failed! Check Key/Prime.");
+
+            document.getElementById('screen-handshake').classList.add('hidden');
+            document.getElementById('screen-chat').classList.remove('hidden');
+            window.scrollTo(0, 0);
+            initWebRTC();
+        };
+
+        // 2. WebRTC Core Engine
+        function initWebRTC() {
+            peerConnection = new RTCPeerConnection(iceConfiguration);
+
+            peerConnection.ontrack = (event) => {
+                document.getElementById('remote-video').srcObject = event.streams[0];
+            };
+
+            peerConnection.onicecandidate = (event) => {
+                if(event.candidate) socket.emit('webrtc_signaling', { type: 'ice', candidate: event.candidate });
+            };
+
+            peerConnection.onnegotiationneeded = async () => {
+                try {
+                    const offer = await peerConnection.createOffer();
+                    await peerConnection.setLocalDescription(offer);
+                    socket.emit('webrtc_signaling', { type: 'offer', offer: peerConnection.localDescription });
+                } catch (err) { console.error(err); }
+            };
+
+            if(isInitiator) {
+                dataChannel = peerConnection.createDataChannel('cryptoTunnel');
+                setupDataChannel();
+                peerConnection.createOffer().then(offer => {
+                    peerConnection.setLocalDescription(offer);
+                    socket.emit('webrtc_signaling', { type: 'offer', offer: offer });
+                });
+            } else {
+                peerConnection.ondatachannel = (event) => {
+                    dataChannel = event.channel;
+                    setupDataChannel();
+                };
+            }
+
+            while(signalQueue.length > 0) {
+                processSignal(signalQueue.shift());
+            }
+        }
+
+        async function processSignal(data) {
+            try {
+                if(data.type === 'offer') {
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+                    const answer = await peerConnection.createAnswer();
+                    await peerConnection.setLocalDescription(answer);
+                    socket.emit('webrtc_signaling', { type: 'answer', answer: peerConnection.localDescription });
+                } else if(data.type === 'answer') {
+                    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+                } else if(data.type === 'ice') {
+                    await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+                } 
+                else if(data.type === 'call_request') {
+                    currentCallType = data.callType;
+                    document.getElementById('call-title').innerText = `Incoming ${data.callType ? 'Video' : 'Voice'} Call...`;
+                    document.getElementById('incoming-call-modal').classList.remove('hidden');
+                } else if(data.type === 'call_accepted') {
+                    window.appendMsg("Call Connected.", "system-msg");
+                    if(!localStream) await startMedia(currentCallType);
+                } else if(data.type === 'call_rejected') {
+                    window.appendMsg("Call Declined.", "system-msg");
+                } else if(data.type === 'call_ended') {
+                    window.endCall(false); 
+                    window.appendMsg("Call Ended by peer.", "system-msg");
+                }
+            } catch(err) { console.error(err); }
+        }
+
+        socket.on('webrtc_signaling', async (data) => {
+            if(!peerConnection) {
+                signalQueue.push(data);
+                return;
+            }
+            processSignal(data);
+        });
+
+        // 3. Media & Call Routing
+        window.requestCall = async function(videoEnabled) {
+            if(!dataChannel || dataChannel.readyState !== 'open') return window.appendMsg("❌ Chat must connect first!", "system-msg");
+            currentCallType = videoEnabled;
+            window.appendMsg(`Ringing ${videoEnabled ? 'Video' : 'Voice'}...`, "system-msg");
+            const success = await startMedia(videoEnabled);
+            if(success) socket.emit('webrtc_signaling', { type: 'call_request', callType: videoEnabled });
+        };
+
+        window.acceptCall = async function() {
+            document.getElementById('incoming-call-modal').classList.add('hidden');
+            const success = await startMedia(currentCallType);
+            if(success) socket.emit('webrtc_signaling', { type: 'call_accepted' });
+        };
+
+        window.rejectCall = function() {
+            document.getElementById('incoming-call-modal').classList.add('hidden');
+            socket.emit('webrtc_signaling', { type: 'call_rejected' });
+        };
+
+        async function startMedia(videoEnabled) {
+            try {
+                const constraints = {
+                    audio: { echoCancellation: true, noiseSuppression: true },
+                    video: videoEnabled ? { facingMode: 'user', width: { ideal: 640 }, frameRate: { ideal: 24 } } : false
+                };
+                localStream = await navigator.mediaDevices.getUserMedia(constraints);
+                document.getElementById('video-container').classList.remove('hidden');
+                document.getElementById('local-video').srcObject = localStream;
+
+                localStream.getTracks().forEach(track => {
+                    peerConnection.addTrack(track, localStream);
+                });
+                return true;
+            } catch (err) { 
+                alert("Camera/Mic Permission Denied!"); 
+                return false;
+            }
+        }
+
+        window.endCall = function(emitSignal = true) {
+            if(localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+            }
+            document.getElementById('video-container').classList.add('hidden');
+            if(emitSignal) {
+                socket.emit('webrtc_signaling', { type: 'call_ended' });
+                window.appendMsg("You ended the call.", 'system-msg');
+            }
+        };
+
+        // Draggable Local Video (Mouse & Touch)
+        const localVid = document.getElementById('local-video');
+        let isDragging = false, startX, startY, currentX = 0, currentY = 0;
+        function dragStart(e) {
+            if(e.type === "touchstart") { startX = e.touches[0].clientX - currentX; startY = e.touches[0].clientY - currentY; } 
+            else { startX = e.clientX - currentX; startY = e.clientY - currentY; }
+            isDragging = true;
+        }
+        function dragEnd() { isDragging = false; }
+        function drag(e) {
+            if(!isDragging) return;
+            e.preventDefault();
+            if(e.type === "touchmove") { currentX = e.touches[0].clientX - startX; currentY = e.touches[0].clientY - startY; } 
+            else { currentX = e.clientX - startX; currentY = e.clientY - startY; }
+            localVid.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
+        }
+        localVid.addEventListener('mousedown', dragStart); localVid.addEventListener('touchstart', dragStart, {passive: false});
+        window.addEventListener('mouseup', dragEnd); window.addEventListener('touchend', dragEnd);
+        window.addEventListener('mousemove', drag); window.addEventListener('touchmove', drag, {passive: false});
+
+        // 4. Chat & File Sharing Channel
+        function setupDataChannel() {
+            dataChannel.onopen = () => {
+                const status = document.getElementById('status-msg');
+                status.innerText = "✅ Military-Grade E2EE Tunnel Active!";
+                status.style.color = "var(--success-green)";
+                status.style.border = "none";
+            };
+            dataChannel.onclose = () => window.appendMsg("⚠️ Peer Disconnected.", "system-msg");
+            dataChannel.onmessage = (event) => handleIncomingData(event.data);
+        }
+
+        window.sendMessage = function() {
+            if(!dataChannel || dataChannel.readyState !== 'open') return alert("Tunnel is connecting... please wait for the ✅ Green message!");
+            const input = document.getElementById('msg-input');
+            const fileInput = document.getElementById('file-upload');
+            
+            if(fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const base64Data = reader.result;
+                    dataChannel.send(JSON.stringify({ type: 'file-meta', fileType: file.type }));
+                    const chunkSize = 16384;
+                    for (let i = 0; i < base64Data.length; i += chunkSize) {
+                        dataChannel.send(JSON.stringify({ type: 'file-chunk', data: base64Data.slice(i, i + chunkSize) }));
+                    }
+                    dataChannel.send(JSON.stringify({ type: 'file-end' }));
+                    window.displayMedia(base64Data, file.type, 'sent-msg');
+                };
+                reader.readAsDataURL(file);
+                fileInput.value = ''; 
+            }
+
+            if(input.value.trim()) {
+                window.appendMsg(input.value.trim(), 'sent-msg');
+                dataChannel.send(JSON.stringify({ type: 'text', text: input.value.trim() }));
+                input.value = '';
+            }
+        };
+
+        let incomingBuffer = "", incomingMeta = null;
+        function handleIncomingData(rawData) {
+            const parsed = JSON.parse(rawData);
+            if(parsed.type === 'text') window.appendMsg(parsed.text, 'recv-msg');
+            else if (parsed.type === 'file-meta') { incomingMeta = parsed; incomingBuffer = ""; }
+            else if (parsed.type === 'file-chunk') incomingBuffer += parsed.data; 
+            else if (parsed.type === 'file-end') window.displayMedia(incomingBuffer, incomingMeta.fileType, 'recv-msg');
+        }
+
+        window.appendMsg = function(text, type) {
+            const logs = document.getElementById('chat-logs');
+            logs.insertAdjacentHTML('beforeend', `<div class="message ${type}">${text}</div>`);
+            logs.scrollTop = logs.scrollHeight;
+        };
+
+        window.displayMedia = function(base64Data, mimeType, type) {
+            const logs = document.getElementById('chat-logs');
+            if(mimeType.startsWith('image/')) logs.insertAdjacentHTML('beforeend', `<div class="message ${type}"><img src="${base64Data}" class="media-content" onclick="window.openModal('${base64Data}')"></div>`);
+            else if(mimeType.startsWith('video/')) logs.insertAdjacentHTML('beforeend', `<div class="message ${type}"><video src="${base64Data}" controls class="media-content"></video></div>`);
+            logs.scrollTop = logs.scrollHeight;
+        };
+
+        window.openModal = function(imageSrc) {
+            document.getElementById('image-modal').classList.remove('hidden');
+            document.getElementById('modal-img').src = imageSrc;
+        };
+        window.closeModal = function() { document.getElementById('image-modal').classList.add('hidden'); };
+        window.checkEnter = function(e) { if(e.key === 'Enter') window.sendMessage(); };
+        window.triggerKillSwitch = function() { location.reload(); };
+    </script>
+</body>
+</html>
