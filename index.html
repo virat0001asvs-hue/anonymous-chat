@@ -47,16 +47,22 @@
         .recv-msg { background: rgba(255,255,255,0.1); color: #fff; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid var(--glass-border); }
         .media-content { max-width: 100%; border-radius: 8px; margin-top: 5px; cursor: zoom-in; }
 
-        /* 🎥 FULLSCREEN VIDEO UI WITH ADVANCED CONTROLS */
+        /* 🎥 FULLSCREEN VIDEO UI WITH GPU ACCELERATION */
         #video-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; background: #111; z-index: 2000; overflow: hidden; }
         #remote-video { width: 100%; height: 100%; object-fit: cover; }
-        #local-video { position: absolute; top: 30px; right: 20px; width: 100px; height: 140px; object-fit: cover; border-radius: 12px; border: 2px solid rgba(255,255,255,0.5); box-shadow: 0 10px 30px rgba(0,0,0,0.8); z-index: 2001; background: #222; cursor: grab; touch-action: none; }
+        #local-video { position: absolute; top: 30px; right: 20px; width: 100px; height: 140px; object-fit: cover; border-radius: 12px; border: 2px solid rgba(255,255,255,0.5); box-shadow: 0 10px 30px rgba(0,0,0,0.8); z-index: 2001; background: #222; cursor: grab; touch-action: none; will-change: transform; }
         #local-video:active { cursor: grabbing; }
 
         .call-controls { position: absolute; bottom: 30px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 15px; z-index: 2002; padding: 0 20px; box-sizing: border-box; }
         
         .advanced-controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; width: 100%; transition: opacity 0.3s ease; }
         .tool-btn { background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 12px 18px; border-radius: 16px; font-weight: bold; cursor: pointer; backdrop-filter: blur(10px); display: flex; align-items: center; gap: 5px; }
+        
+        /* ✨ NEW: Quality Selector Styling ✨ */
+        .quality-selector { display: flex; align-items: center; gap: 5px; background: rgba(255,255,255,0.2); padding: 5px 12px; border-radius: 16px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        .quality-selector select { background: transparent; color: white; border: none; outline: none; font-weight: bold; cursor: pointer; font-size: 0.9rem; }
+        .quality-selector select option { background: #0f172a; color: white; }
+
         .vol-slider-container { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.2); padding: 10px 15px; border-radius: 16px; backdrop-filter: blur(10px); }
         input[type=range] { width: 80px; accent-color: var(--neon-cyan); }
         
@@ -126,6 +132,15 @@
             <div id="advanced-controls" class="advanced-controls hidden">
                 <button onclick="window.toggleMute()" id="mute-btn" class="tool-btn">🎤 Unmuted</button>
                 <button onclick="window.switchCamera()" id="switch-cam-btn" class="tool-btn">🔄 Flip</button>
+                
+                <div class="quality-selector" id="quality-box">
+                    ⚙️ <select id="video-quality" onchange="window.changeQuality()">
+                        <option value="low">Data Saver (480p)</option>
+                        <option value="medium" selected>Standard HD (720p)</option>
+                        <option value="high">Ultra HD 5G (1080p)</option>
+                    </select>
+                </div>
+
                 <div class="vol-slider-container">
                     🔊 <input type="range" id="vol-slider" min="0" max="1" step="0.1" value="1" oninput="window.changeVolume(this.value)">
                 </div>
@@ -155,15 +170,15 @@
         let peerConnection, dataChannel, localStream;
         let currentCallType = null; 
         
-        // ELITE FIX: Buffers to handle network race conditions
+        // Elite Buffering to handle network races
         let signalQueue = []; 
         let iceQueue = []; 
-        let isNegotiating = false; // Prevents double-offer collision
+        let isNegotiating = false; 
 
         let isMuted = false;
         let currentFacingMode = 'user'; 
 
-        // Added Cloudflare STUN for 100% Indian Network Support
+        // RETAINED: Cloudflare + Google STUN
         const iceConfiguration = { 
             iceServers: [
                 { urls: 'stun:stun.l.google.com:19302' }, 
@@ -214,7 +229,6 @@
                 if(event.candidate) socket.emit('webrtc_signaling', { type: 'ice', candidate: event.candidate });
             };
 
-            // Smart Negotiation (Prevents Collision)
             peerConnection.onnegotiationneeded = async () => {
                 if(isNegotiating) return;
                 isNegotiating = true;
@@ -229,7 +243,6 @@
             if(isInitiator) {
                 dataChannel = peerConnection.createDataChannel('cryptoTunnel');
                 setupDataChannel();
-                // Removed manual createOffer here. onnegotiationneeded will handle it!
             } else {
                 peerConnection.ondatachannel = (event) => {
                     dataChannel = event.channel;
@@ -237,12 +250,9 @@
                 };
             }
 
-            while(signalQueue.length > 0) {
-                processSignal(signalQueue.shift());
-            }
+            while(signalQueue.length > 0) processSignal(signalQueue.shift());
         }
 
-        // Process buffered ICE candidates safely
         function processIceQueue() {
             while(iceQueue.length > 0) {
                 const candidate = iceQueue.shift();
@@ -257,15 +267,15 @@
                     const answer = await peerConnection.createAnswer();
                     await peerConnection.setLocalDescription(answer);
                     socket.emit('webrtc_signaling', { type: 'answer', answer: peerConnection.localDescription });
-                    processIceQueue(); // Process buffered ICE
+                    processIceQueue(); 
                 } else if(data.type === 'answer') {
                     await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
-                    processIceQueue(); // Process buffered ICE
+                    processIceQueue(); 
                 } else if(data.type === 'ice') {
                     if (peerConnection.remoteDescription) {
                         await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
                     } else {
-                        iceQueue.push(data.candidate); // BUFFER IT!
+                        iceQueue.push(data.candidate); 
                     }
                 } 
                 else if(data.type === 'call_request') {
@@ -276,7 +286,8 @@
                     window.appendMsg("Call Connected.", "system-msg");
                     if(!localStream) await startMedia(currentCallType);
                     document.getElementById('advanced-controls').classList.remove('hidden');
-                    document.getElementById('switch-cam-btn').style.display = currentCallType ? "block" : "none";
+                    document.getElementById('switch-cam-btn').style.display = currentCallType ? "flex" : "none";
+                    document.getElementById('quality-box').style.display = currentCallType ? "flex" : "none";
                 } else if(data.type === 'call_rejected') {
                     window.appendMsg("Call Declined.", "system-msg");
                 } else if(data.type === 'call_ended') {
@@ -291,7 +302,6 @@
             processSignal(data);
         });
 
-        // 3. Media & Controls
         window.requestCall = async function(videoEnabled) {
             if(!dataChannel || dataChannel.readyState !== 'open') return window.appendMsg("❌ Chat must connect first!", "system-msg");
             currentCallType = videoEnabled;
@@ -306,7 +316,8 @@
             if(success) {
                 socket.emit('webrtc_signaling', { type: 'call_accepted' });
                 document.getElementById('advanced-controls').classList.remove('hidden');
-                document.getElementById('switch-cam-btn').style.display = currentCallType ? "block" : "none";
+                document.getElementById('switch-cam-btn').style.display = currentCallType ? "flex" : "none";
+                document.getElementById('quality-box').style.display = currentCallType ? "flex" : "none";
             }
         };
 
@@ -315,18 +326,40 @@
             socket.emit('webrtc_signaling', { type: 'call_rejected' });
         };
 
+        /* ✨ NEW: DYNAMIC QUALITY ENGINE ✨ */
+        function getQualityConstraints() {
+            const q = document.getElementById('video-quality').value;
+            // High (1080p, 60fps, 4Mbps)
+            if (q === 'high') return { width: { ideal: 1920 }, frameRate: { ideal: 60, max: 60 }, bitrate: 4000000 };
+            // Low (480p, 24fps, 500Kbps)
+            if (q === 'low') return { width: { ideal: 640 }, frameRate: { ideal: 24, max: 24 }, bitrate: 500000 };
+            // Default Standard (720p, 30fps, 1.5Mbps)
+            return { width: { ideal: 1280 }, frameRate: { ideal: 30, max: 30 }, bitrate: 1500000 };
+        }
+
         async function startMedia(videoEnabled) {
             try {
+                const q = getQualityConstraints();
                 const constraints = {
-                    audio: { echoCancellation: true, noiseSuppression: true },
-                    video: videoEnabled ? { facingMode: currentFacingMode, width: { ideal: 640 }, frameRate: { ideal: 24 } } : false
+                    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+                    video: videoEnabled ? { 
+                        facingMode: currentFacingMode, 
+                        width: q.width,
+                        frameRate: q.frameRate 
+                    } : false
                 };
                 localStream = await navigator.mediaDevices.getUserMedia(constraints);
                 document.getElementById('video-container').classList.remove('hidden');
                 document.getElementById('local-video').srcObject = localStream;
 
                 localStream.getTracks().forEach(track => {
-                    peerConnection.addTrack(track, localStream);
+                    const sender = peerConnection.addTrack(track, localStream);
+                    if (track.kind === 'video') {
+                        const parameters = sender.getParameters();
+                        if (!parameters.encodings) parameters.encodings = [{}];
+                        parameters.encodings[0].maxBitrate = q.bitrate; 
+                        sender.setParameters(parameters).catch(e => console.log("Bitrate lock info: ", e));
+                    }
                 });
                 return true;
             } catch (err) { 
@@ -334,6 +367,41 @@
                 return false;
             }
         }
+
+        /* Helper function to seamlessly replace tracks when camera or quality changes */
+        async function updateVideoTrack() {
+            if (!currentCallType || !localStream) return;
+            const q = getQualityConstraints();
+            try {
+                const newStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: currentFacingMode, width: q.width, frameRate: q.frameRate }
+                });
+                const newVideoTrack = newStream.getVideoTracks()[0];
+                const sender = peerConnection.getSenders().find(s => s.track.kind === 'video');
+                
+                if (sender) {
+                    sender.replaceTrack(newVideoTrack);
+                    const parameters = sender.getParameters();
+                    if (!parameters.encodings) parameters.encodings = [{}];
+                    parameters.encodings[0].maxBitrate = q.bitrate; 
+                    sender.setParameters(parameters).catch(e => console.log(e));
+                }
+                
+                const oldTrack = localStream.getVideoTracks()[0];
+                localStream.removeTrack(oldTrack);
+                oldTrack.stop(); 
+                localStream.addTrack(newVideoTrack);
+                document.getElementById('local-video').srcObject = localStream;
+            } catch (err) {
+                console.error("Track Update Error:", err);
+            }
+        }
+
+        window.changeQuality = function() { updateVideoTrack(); };
+        window.switchCamera = function() { 
+            currentFacingMode = (currentFacingMode === 'user') ? 'environment' : 'user';
+            updateVideoTrack(); 
+        };
 
         window.endCall = function(emitSignal = true) {
             if(localStream) {
@@ -369,27 +437,7 @@
             document.getElementById('remote-video').volume = val;
         };
 
-        window.switchCamera = async function() {
-            if (!currentCallType || !localStream) return;
-            currentFacingMode = (currentFacingMode === 'user') ? 'environment' : 'user';
-            try {
-                const newStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: currentFacingMode, width: { ideal: 640 }, frameRate: { ideal: 24 } }
-                });
-                const newVideoTrack = newStream.getVideoTracks()[0];
-                const sender = peerConnection.getSenders().find(s => s.track.kind === 'video');
-                if (sender) sender.replaceTrack(newVideoTrack);
-                
-                const oldTrack = localStream.getVideoTracks()[0];
-                localStream.removeTrack(oldTrack);
-                oldTrack.stop(); 
-                localStream.addTrack(newVideoTrack);
-                document.getElementById('local-video').srcObject = localStream;
-            } catch (err) {
-                console.error("Camera Switch Error:", err);
-            }
-        };
-
+        // Smooth GPU Accelerated Dragging
         const localVid = document.getElementById('local-video');
         let isDragging = false, startX, startY, currentX = 0, currentY = 0;
         function dragStart(e) {
