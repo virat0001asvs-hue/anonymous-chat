@@ -47,7 +47,7 @@
         .recv-msg { background: rgba(255,255,255,0.1); color: #fff; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid var(--glass-border); }
         .media-content { max-width: 100%; border-radius: 8px; margin-top: 5px; cursor: zoom-in; }
 
-        /* 🎥 FULLSCREEN VIDEO UI WITH GPU ACCELERATION */
+        /* 🎥 FULLSCREEN VIDEO UI */
         #video-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; background: #111; z-index: 2000; overflow: hidden; }
         #remote-video { width: 100%; height: 100%; object-fit: cover; }
         #local-video { position: absolute; top: 30px; right: 20px; width: 100px; height: 140px; object-fit: cover; border-radius: 12px; border: 2px solid rgba(255,255,255,0.5); box-shadow: 0 10px 30px rgba(0,0,0,0.8); z-index: 2001; background: #222; cursor: grab; touch-action: none; will-change: transform; }
@@ -58,7 +58,6 @@
         .advanced-controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; width: 100%; transition: opacity 0.3s ease; }
         .tool-btn { background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 12px 18px; border-radius: 16px; font-weight: bold; cursor: pointer; backdrop-filter: blur(10px); display: flex; align-items: center; gap: 5px; }
         
-        /* ✨ NEW: Quality Selector Styling ✨ */
         .quality-selector { display: flex; align-items: center; gap: 5px; background: rgba(255,255,255,0.2); padding: 5px 12px; border-radius: 16px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
         .quality-selector select { background: transparent; color: white; border: none; outline: none; font-weight: bold; cursor: pointer; font-size: 0.9rem; }
         .quality-selector select option { background: #0f172a; color: white; }
@@ -137,7 +136,7 @@
                     ⚙️ <select id="video-quality" onchange="window.changeQuality()">
                         <option value="low">Data Saver (480p)</option>
                         <option value="medium" selected>Standard HD (720p)</option>
-                        <option value="high">Ultra HD 5G (1080p)</option>
+                        <option value="high">Ultra HD (1080p)</option>
                     </select>
                 </div>
 
@@ -170,7 +169,6 @@
         let peerConnection, dataChannel, localStream;
         let currentCallType = null; 
         
-        // Elite Buffering to handle network races
         let signalQueue = []; 
         let iceQueue = []; 
         let isNegotiating = false; 
@@ -178,7 +176,6 @@
         let isMuted = false;
         let currentFacingMode = 'user'; 
 
-        // RETAINED: Cloudflare + Google STUN
         const iceConfiguration = { 
             iceServers: [
                 { urls: 'stun:stun.l.google.com:19302' }, 
@@ -282,12 +279,19 @@
                     currentCallType = data.callType;
                     document.getElementById('call-title').innerText = `Incoming ${data.callType ? 'Video' : 'Voice'} Call...`;
                     document.getElementById('incoming-call-modal').classList.remove('hidden');
-                } else if(data.type === 'call_accepted') {
+                } 
+                // BUG FIX: ALWAYS SHOW UI ON CONNECTION, EVEN IF MEDIA FAILS
+                else if(data.type === 'call_accepted') {
                     window.appendMsg("Call Connected.", "system-msg");
-                    if(!localStream) await startMedia(currentCallType);
+                    
+                    document.getElementById('video-container').classList.remove('hidden');
                     document.getElementById('advanced-controls').classList.remove('hidden');
                     document.getElementById('switch-cam-btn').style.display = currentCallType ? "flex" : "none";
                     document.getElementById('quality-box').style.display = currentCallType ? "flex" : "none";
+
+                    if(!localStream) {
+                        await startMedia(currentCallType);
+                    }
                 } else if(data.type === 'call_rejected') {
                     window.appendMsg("Call Declined.", "system-msg");
                 } else if(data.type === 'call_ended') {
@@ -306,19 +310,26 @@
             if(!dataChannel || dataChannel.readyState !== 'open') return window.appendMsg("❌ Chat must connect first!", "system-msg");
             currentCallType = videoEnabled;
             window.appendMsg(`Ringing ${videoEnabled ? 'Video' : 'Voice'}...`, "system-msg");
+            
+            document.getElementById('video-container').classList.remove('hidden'); // Show End Call instantly
+            
             const success = await startMedia(videoEnabled);
             if(success) socket.emit('webrtc_signaling', { type: 'call_request', callType: videoEnabled });
+            else document.getElementById('video-container').classList.add('hidden');
         };
 
+        // BUG FIX: Show UI before even attempting camera, so user can hang up
         window.acceptCall = async function() {
             document.getElementById('incoming-call-modal').classList.add('hidden');
+            
+            // ALWAYS SHOW BUTTONS
+            document.getElementById('video-container').classList.remove('hidden');
+            document.getElementById('advanced-controls').classList.remove('hidden');
+            document.getElementById('switch-cam-btn').style.display = currentCallType ? "flex" : "none";
+            document.getElementById('quality-box').style.display = currentCallType ? "flex" : "none";
+
             const success = await startMedia(currentCallType);
-            if(success) {
-                socket.emit('webrtc_signaling', { type: 'call_accepted' });
-                document.getElementById('advanced-controls').classList.remove('hidden');
-                document.getElementById('switch-cam-btn').style.display = currentCallType ? "flex" : "none";
-                document.getElementById('quality-box').style.display = currentCallType ? "flex" : "none";
-            }
+            socket.emit('webrtc_signaling', { type: 'call_accepted' });
         };
 
         window.rejectCall = function() {
@@ -326,14 +337,10 @@
             socket.emit('webrtc_signaling', { type: 'call_rejected' });
         };
 
-        /* ✨ NEW: DYNAMIC QUALITY ENGINE ✨ */
         function getQualityConstraints() {
             const q = document.getElementById('video-quality').value;
-            // High (1080p, 60fps, 4Mbps)
             if (q === 'high') return { width: { ideal: 1920 }, frameRate: { ideal: 60, max: 60 }, bitrate: 4000000 };
-            // Low (480p, 24fps, 500Kbps)
             if (q === 'low') return { width: { ideal: 640 }, frameRate: { ideal: 24, max: 24 }, bitrate: 500000 };
-            // Default Standard (720p, 30fps, 1.5Mbps)
             return { width: { ideal: 1280 }, frameRate: { ideal: 30, max: 30 }, bitrate: 1500000 };
         }
 
@@ -349,7 +356,6 @@
                     } : false
                 };
                 localStream = await navigator.mediaDevices.getUserMedia(constraints);
-                document.getElementById('video-container').classList.remove('hidden');
                 document.getElementById('local-video').srcObject = localStream;
 
                 localStream.getTracks().forEach(track => {
@@ -363,14 +369,13 @@
                 });
                 return true;
             } catch (err) { 
-                alert("Camera/Mic Permission Denied!"); 
+                alert("Camera/Mic Permission Denied!\nCheck browser settings."); 
                 return false;
             }
         }
 
-        /* Helper function to seamlessly replace tracks when camera or quality changes */
         async function updateVideoTrack() {
-            if (!currentCallType || !localStream) return;
+            if (!currentCallType || !localStream || localStream.getVideoTracks().length === 0) return;
             const q = getQualityConstraints();
             try {
                 const newStream = await navigator.mediaDevices.getUserMedia({
@@ -398,7 +403,10 @@
         }
 
         window.changeQuality = function() { updateVideoTrack(); };
+        
+        // BUG FIX: Null check for camera flip
         window.switchCamera = function() { 
+            if(!localStream || localStream.getVideoTracks().length === 0) return alert("No active camera to switch!");
             currentFacingMode = (currentFacingMode === 'user') ? 'environment' : 'user';
             updateVideoTrack(); 
         };
@@ -422,14 +430,17 @@
             }
         };
 
+        // BUG FIX: Null check for mute
         window.toggleMute = function() {
-            if(localStream) {
+            if(localStream && localStream.getAudioTracks().length > 0) {
                 isMuted = !isMuted;
                 localStream.getAudioTracks()[0].enabled = !isMuted; 
                 const btn = document.getElementById('mute-btn');
                 btn.innerText = isMuted ? "🔇 Muted" : "🎤 Unmuted";
                 btn.style.background = isMuted ? "var(--danger-red)" : "rgba(255,255,255,0.2)";
                 btn.style.borderColor = isMuted ? "var(--danger-red)" : "rgba(255,255,255,0.1)";
+            } else {
+                alert("No active microphone to mute!");
             }
         };
 
@@ -437,7 +448,6 @@
             document.getElementById('remote-video').volume = val;
         };
 
-        // Smooth GPU Accelerated Dragging
         const localVid = document.getElementById('local-video');
         let isDragging = false, startX, startY, currentX = 0, currentY = 0;
         function dragStart(e) {
