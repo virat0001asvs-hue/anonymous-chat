@@ -55,7 +55,6 @@
 
         .call-controls { position: absolute; bottom: 30px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 15px; z-index: 2002; padding: 0 20px; box-sizing: border-box; }
         
-        /* NEW: In-Call Toolbar */
         .advanced-controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; width: 100%; transition: opacity 0.3s ease; }
         .tool-btn { background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 12px 18px; border-radius: 16px; font-weight: bold; cursor: pointer; backdrop-filter: blur(10px); display: flex; align-items: center; gap: 5px; }
         .vol-slider-container { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.2); padding: 10px 15px; border-radius: 16px; backdrop-filter: blur(10px); }
@@ -155,13 +154,22 @@
         let activePrime = null, isInitiator = false;
         let peerConnection, dataChannel, localStream;
         let currentCallType = null; 
+        
+        // ELITE FIX: Buffers to handle network race conditions
         let signalQueue = []; 
+        let iceQueue = []; 
+        let isNegotiating = false; // Prevents double-offer collision
 
-        // New Variables for Advanced Controls
         let isMuted = false;
-        let currentFacingMode = 'user'; // Defaults to Front Camera
+        let currentFacingMode = 'user'; 
 
-        const iceConfiguration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] };
+        // Added Cloudflare STUN for 100% Indian Network Support
+        const iceConfiguration = { 
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' }, 
+                { urls: 'stun:stun.cloudflare.com:3478' }
+            ] 
+        };
 
         window.sendSecurePing = function() {
             isInitiator = true;
@@ -206,21 +214,22 @@
                 if(event.candidate) socket.emit('webrtc_signaling', { type: 'ice', candidate: event.candidate });
             };
 
+            // Smart Negotiation (Prevents Collision)
             peerConnection.onnegotiationneeded = async () => {
+                if(isNegotiating) return;
+                isNegotiating = true;
                 try {
                     const offer = await peerConnection.createOffer();
                     await peerConnection.setLocalDescription(offer);
                     socket.emit('webrtc_signaling', { type: 'offer', offer: peerConnection.localDescription });
                 } catch (err) { console.error(err); }
+                finally { isNegotiating = false; }
             };
 
             if(isInitiator) {
                 dataChannel = peerConnection.createDataChannel('cryptoTunnel');
                 setupDataChannel();
-                peerConnection.createOffer().then(offer => {
-                    peerConnection.setLocalDescription(offer);
-                    socket.emit('webrtc_signaling', { type: 'offer', offer: offer });
-                });
+                // Removed manual createOffer here. onnegotiationneeded will handle it!
             } else {
                 peerConnection.ondatachannel = (event) => {
                     dataChannel = event.channel;
@@ -233,6 +242,14 @@
             }
         }
 
+        // Process buffered ICE candidates safely
+        function processIceQueue() {
+            while(iceQueue.length > 0) {
+                const candidate = iceQueue.shift();
+                peerConnection.addIceCandidate(new RTCIceCandidate(candidate)).catch(e => console.error(e));
+            }
+        }
+
         async function processSignal(data) {
             try {
                 if(data.type === 'offer') {
@@ -240,10 +257,16 @@
                     const answer = await peerConnection.createAnswer();
                     await peerConnection.setLocalDescription(answer);
                     socket.emit('webrtc_signaling', { type: 'answer', answer: peerConnection.localDescription });
+                    processIceQueue(); // Process buffered ICE
                 } else if(data.type === 'answer') {
                     await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+                    processIceQueue(); // Process buffered ICE
                 } else if(data.type === 'ice') {
-                    await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+                    if (peerConnection.remoteDescription) {
+                        await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+                    } else {
+                        iceQueue.push(data.candidate); // BUFFER IT!
+                    }
                 } 
                 else if(data.type === 'call_request') {
                     currentCallType = data.callType;
@@ -252,11 +275,8 @@
                 } else if(data.type === 'call_accepted') {
                     window.appendMsg("Call Connected.", "system-msg");
                     if(!localStream) await startMedia(currentCallType);
-                    
-                    // SHOW MUTE & CONTROLS ONCE CALL IS ACCEPTED!
                     document.getElementById('advanced-controls').classList.remove('hidden');
                     document.getElementById('switch-cam-btn').style.display = currentCallType ? "block" : "none";
-                    
                 } else if(data.type === 'call_rejected') {
                     window.appendMsg("Call Declined.", "system-msg");
                 } else if(data.type === 'call_ended') {
@@ -271,6 +291,7 @@
             processSignal(data);
         });
 
+        // 3. Media & Controls
         window.requestCall = async function(videoEnabled) {
             if(!dataChannel || dataChannel.readyState !== 'open') return window.appendMsg("❌ Chat must connect first!", "system-msg");
             currentCallType = videoEnabled;
@@ -284,7 +305,6 @@
             const success = await startMedia(currentCallType);
             if(success) {
                 socket.emit('webrtc_signaling', { type: 'call_accepted' });
-                // SHOW MUTE & CONTROLS ONCE WE ACCEPT THE CALL!
                 document.getElementById('advanced-controls').classList.remove('hidden');
                 document.getElementById('switch-cam-btn').style.display = currentCallType ? "block" : "none";
             }
@@ -321,9 +341,8 @@
                 localStream = null;
             }
             document.getElementById('video-container').classList.add('hidden');
-            document.getElementById('advanced-controls').classList.add('hidden'); // Hide controls
+            document.getElementById('advanced-controls').classList.add('hidden'); 
             
-            // Reset Tools
             isMuted = false;
             document.getElementById('mute-btn').innerText = "🎤 Unmuted";
             document.getElementById('mute-btn').style.background = "rgba(255,255,255,0.2)";
@@ -335,13 +354,10 @@
             }
         };
 
-        /* ✨ NEW: THE ELITE TOOLBAR FUNCTIONS ✨ */
-        
-        // 1. Mute/Unmute
         window.toggleMute = function() {
             if(localStream) {
                 isMuted = !isMuted;
-                localStream.getAudioTracks()[0].enabled = !isMuted; // Hard cuts the mic data
+                localStream.getAudioTracks()[0].enabled = !isMuted; 
                 const btn = document.getElementById('mute-btn');
                 btn.innerText = isMuted ? "🔇 Muted" : "🎤 Unmuted";
                 btn.style.background = isMuted ? "var(--danger-red)" : "rgba(255,255,255,0.2)";
@@ -349,44 +365,31 @@
             }
         };
 
-        // 2. Hardware Volume Control
         window.changeVolume = function(val) {
             document.getElementById('remote-video').volume = val;
         };
 
-        // 3. Zero-Drop Camera Switch (Front <-> Back)
         window.switchCamera = async function() {
             if (!currentCallType || !localStream) return;
-            
-            // Flip the mode
             currentFacingMode = (currentFacingMode === 'user') ? 'environment' : 'user';
-            
             try {
-                // Get the new camera feed
                 const newStream = await navigator.mediaDevices.getUserMedia({
                     video: { facingMode: currentFacingMode, width: { ideal: 640 }, frameRate: { ideal: 24 } }
                 });
-                
                 const newVideoTrack = newStream.getVideoTracks()[0];
-                
-                // Replace track in live peer connection without ending the call!
                 const sender = peerConnection.getSenders().find(s => s.track.kind === 'video');
                 if (sender) sender.replaceTrack(newVideoTrack);
                 
-                // Update the small local video box
                 const oldTrack = localStream.getVideoTracks()[0];
                 localStream.removeTrack(oldTrack);
-                oldTrack.stop(); // Turn off old camera LED
+                oldTrack.stop(); 
                 localStream.addTrack(newVideoTrack);
                 document.getElementById('local-video').srcObject = localStream;
-                
             } catch (err) {
                 console.error("Camera Switch Error:", err);
-                alert("Failed to flip camera. Mobile might not support it.");
             }
         };
 
-        // Draggable Video Logic
         const localVid = document.getElementById('local-video');
         let isDragging = false, startX, startY, currentX = 0, currentY = 0;
         function dragStart(e) {
@@ -418,7 +421,7 @@
         }
 
         window.sendMessage = function() {
-            if(!dataChannel || dataChannel.readyState !== 'open') return alert("Tunnel is connecting... please wait for the ✅ Green message!");
+            if(!dataChannel || dataChannel.readyState !== 'open') return alert("Tunnel connecting... Wait for ✅ Green status!");
             const input = document.getElementById('msg-input');
             const fileInput = document.getElementById('file-upload');
             
