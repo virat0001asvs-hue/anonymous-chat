@@ -16,7 +16,6 @@
             --success-green: #22c55e; 
         }
 
-        /* FIX: 100dvh for Dynamic Mobile Viewport */
         body { background: var(--bg-gradient); color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100dvh; margin: 0; overflow: hidden; touch-action: manipulation; }
 
         .window-panel { background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 20px; padding: 1.2rem; width: 92%; max-width: 450px; max-height: 98dvh; box-shadow: 0 20px 40px rgba(0,0,0,0.5); display: flex; flex-direction: column; box-sizing: border-box; }
@@ -29,21 +28,16 @@
         input:focus { border-color: var(--neon-cyan); }
 
         .primary-btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 1rem; transition: 0.2s; color: white; margin-top: 5px; background: var(--neon-cyan); }
-        
-        /* FIX: flex-shrink: 0 protects the button from hiding */
         .btn-kill { width: 100%; padding: 14px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 1rem; transition: 0.2s; color: var(--danger-red); margin-top: 15px; margin-bottom: 5px; background: rgba(239, 68, 68, 0.2); border: 1px solid var(--danger-red); flex-shrink: 0; }
 
         .prime-box { background: rgba(0,0,0,0.5); padding: 15px; border-radius: 12px; text-align: center; margin-bottom: 1.5rem; border: 1px solid var(--neon-cyan); }
         .prime-label { color: var(--neon-cyan); font-size: 0.7rem; display: block; margin-bottom: 5px; }
         #display-prime { font-size: 1.8rem; font-weight: bold; letter-spacing: 2px; }
 
-        /* Mobile Chat Layout */
+        /* Mobile Chat */
         #chat-logs { flex-grow: 1; overflow-y: auto; background: rgba(0,0,0,0.3); border-radius: 12px; padding: 10px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--glass-border); scroll-behavior: smooth; }
-        
-        /* FIX: Protect Input area from shrinking */
         .chat-input-area { display: flex; gap: 8px; align-items: center; width: 100%; justify-content: space-between; flex-shrink: 0; }
-
-        .icon-btn, #send-btn { width: 45px; height: 45px; min-width: 45px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.08); display: flex; justify-content: center; align-items: center; cursor: pointer; font-size: 1.2rem; color: white; margin: 0; padding: 0; box-sizing: border-box; }
+        .icon-btn, #send-btn { width: 45px; height: 45px; min-width: 45px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.08); display: flex; justify-content: center; align-items: center; cursor: pointer; font-size: 1.2rem; color: white; margin: 0; padding: 0; }
         #send-btn { background: var(--neon-cyan); border: none; }
         #msg-input { flex-grow: 1; height: 45px; border-radius: 24px; padding: 0 15px; width: 10px; }
 
@@ -53,13 +47,20 @@
         .recv-msg { background: rgba(255,255,255,0.1); color: #fff; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid var(--glass-border); }
         .media-content { max-width: 100%; border-radius: 8px; margin-top: 5px; cursor: zoom-in; }
 
-        /* Fullscreen Native Video Call UI */
+        /* 🎥 FULLSCREEN VIDEO UI WITH ADVANCED CONTROLS */
         #video-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; background: #111; z-index: 2000; overflow: hidden; }
         #remote-video { width: 100%; height: 100%; object-fit: cover; }
         #local-video { position: absolute; top: 30px; right: 20px; width: 100px; height: 140px; object-fit: cover; border-radius: 12px; border: 2px solid rgba(255,255,255,0.5); box-shadow: 0 10px 30px rgba(0,0,0,0.8); z-index: 2001; background: #222; cursor: grab; touch-action: none; }
         #local-video:active { cursor: grabbing; }
 
-        .call-controls { position: absolute; bottom: 40px; width: 100%; display: flex; justify-content: center; z-index: 2002; }
+        .call-controls { position: absolute; bottom: 30px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 15px; z-index: 2002; padding: 0 20px; box-sizing: border-box; }
+        
+        /* NEW: In-Call Toolbar */
+        .advanced-controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; width: 100%; transition: opacity 0.3s ease; }
+        .tool-btn { background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 12px 18px; border-radius: 16px; font-weight: bold; cursor: pointer; backdrop-filter: blur(10px); display: flex; align-items: center; gap: 5px; }
+        .vol-slider-container { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.2); padding: 10px 15px; border-radius: 16px; backdrop-filter: blur(10px); }
+        input[type=range] { width: 80px; accent-color: var(--neon-cyan); }
+        
         #end-call-btn { background: var(--danger-red); color: white; padding: 16px 40px; border-radius: 30px; border: none; font-size: 1.1rem; font-weight: bold; box-shadow: 0 10px 20px rgba(239, 68, 68, 0.4); cursor: pointer; }
 
         /* Incoming Call Modal */
@@ -121,7 +122,15 @@
     <div id="video-container" class="hidden">
         <video id="remote-video" autoplay playsinline></video>
         <video id="local-video" autoplay playsinline muted></video>
+        
         <div class="call-controls">
+            <div id="advanced-controls" class="advanced-controls hidden">
+                <button onclick="window.toggleMute()" id="mute-btn" class="tool-btn">🎤 Unmuted</button>
+                <button onclick="window.switchCamera()" id="switch-cam-btn" class="tool-btn">🔄 Flip</button>
+                <div class="vol-slider-container">
+                    🔊 <input type="range" id="vol-slider" min="0" max="1" step="0.1" value="1" oninput="window.changeVolume(this.value)">
+                </div>
+            </div>
             <button onclick="window.endCall()" id="end-call-btn">🔴 End Call</button>
         </div>
     </div>
@@ -147,6 +156,10 @@
         let peerConnection, dataChannel, localStream;
         let currentCallType = null; 
         let signalQueue = []; 
+
+        // New Variables for Advanced Controls
+        let isMuted = false;
+        let currentFacingMode = 'user'; // Defaults to Front Camera
 
         const iceConfiguration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] };
 
@@ -174,7 +187,7 @@
             const userInputPrime = document.getElementById('prime-input').value;
             let userInputKey = document.getElementById('secret-key')?.value;
 
-            if(!userInputKey || parseInt(userInputPrime) !== activePrime) return alert("Handshake Failed! Check Key/Prime.");
+            if(!userInputKey || parseInt(userInputPrime) !== activePrime) return alert("Handshake Failed!");
 
             document.getElementById('screen-handshake').classList.add('hidden');
             document.getElementById('screen-chat').classList.remove('hidden');
@@ -239,6 +252,11 @@
                 } else if(data.type === 'call_accepted') {
                     window.appendMsg("Call Connected.", "system-msg");
                     if(!localStream) await startMedia(currentCallType);
+                    
+                    // SHOW MUTE & CONTROLS ONCE CALL IS ACCEPTED!
+                    document.getElementById('advanced-controls').classList.remove('hidden');
+                    document.getElementById('switch-cam-btn').style.display = currentCallType ? "block" : "none";
+                    
                 } else if(data.type === 'call_rejected') {
                     window.appendMsg("Call Declined.", "system-msg");
                 } else if(data.type === 'call_ended') {
@@ -249,10 +267,7 @@
         }
 
         socket.on('webrtc_signaling', async (data) => {
-            if(!peerConnection) {
-                signalQueue.push(data);
-                return;
-            }
+            if(!peerConnection) { signalQueue.push(data); return; }
             processSignal(data);
         });
 
@@ -267,7 +282,12 @@
         window.acceptCall = async function() {
             document.getElementById('incoming-call-modal').classList.add('hidden');
             const success = await startMedia(currentCallType);
-            if(success) socket.emit('webrtc_signaling', { type: 'call_accepted' });
+            if(success) {
+                socket.emit('webrtc_signaling', { type: 'call_accepted' });
+                // SHOW MUTE & CONTROLS ONCE WE ACCEPT THE CALL!
+                document.getElementById('advanced-controls').classList.remove('hidden');
+                document.getElementById('switch-cam-btn').style.display = currentCallType ? "block" : "none";
+            }
         };
 
         window.rejectCall = function() {
@@ -279,7 +299,7 @@
             try {
                 const constraints = {
                     audio: { echoCancellation: true, noiseSuppression: true },
-                    video: videoEnabled ? { facingMode: 'user', width: { ideal: 640 }, frameRate: { ideal: 24 } } : false
+                    video: videoEnabled ? { facingMode: currentFacingMode, width: { ideal: 640 }, frameRate: { ideal: 24 } } : false
                 };
                 localStream = await navigator.mediaDevices.getUserMedia(constraints);
                 document.getElementById('video-container').classList.remove('hidden');
@@ -301,12 +321,72 @@
                 localStream = null;
             }
             document.getElementById('video-container').classList.add('hidden');
+            document.getElementById('advanced-controls').classList.add('hidden'); // Hide controls
+            
+            // Reset Tools
+            isMuted = false;
+            document.getElementById('mute-btn').innerText = "🎤 Unmuted";
+            document.getElementById('mute-btn').style.background = "rgba(255,255,255,0.2)";
+            document.getElementById('vol-slider').value = 1;
+            
             if(emitSignal) {
                 socket.emit('webrtc_signaling', { type: 'call_ended' });
                 window.appendMsg("You ended the call.", 'system-msg');
             }
         };
 
+        /* ✨ NEW: THE ELITE TOOLBAR FUNCTIONS ✨ */
+        
+        // 1. Mute/Unmute
+        window.toggleMute = function() {
+            if(localStream) {
+                isMuted = !isMuted;
+                localStream.getAudioTracks()[0].enabled = !isMuted; // Hard cuts the mic data
+                const btn = document.getElementById('mute-btn');
+                btn.innerText = isMuted ? "🔇 Muted" : "🎤 Unmuted";
+                btn.style.background = isMuted ? "var(--danger-red)" : "rgba(255,255,255,0.2)";
+                btn.style.borderColor = isMuted ? "var(--danger-red)" : "rgba(255,255,255,0.1)";
+            }
+        };
+
+        // 2. Hardware Volume Control
+        window.changeVolume = function(val) {
+            document.getElementById('remote-video').volume = val;
+        };
+
+        // 3. Zero-Drop Camera Switch (Front <-> Back)
+        window.switchCamera = async function() {
+            if (!currentCallType || !localStream) return;
+            
+            // Flip the mode
+            currentFacingMode = (currentFacingMode === 'user') ? 'environment' : 'user';
+            
+            try {
+                // Get the new camera feed
+                const newStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: currentFacingMode, width: { ideal: 640 }, frameRate: { ideal: 24 } }
+                });
+                
+                const newVideoTrack = newStream.getVideoTracks()[0];
+                
+                // Replace track in live peer connection without ending the call!
+                const sender = peerConnection.getSenders().find(s => s.track.kind === 'video');
+                if (sender) sender.replaceTrack(newVideoTrack);
+                
+                // Update the small local video box
+                const oldTrack = localStream.getVideoTracks()[0];
+                localStream.removeTrack(oldTrack);
+                oldTrack.stop(); // Turn off old camera LED
+                localStream.addTrack(newVideoTrack);
+                document.getElementById('local-video').srcObject = localStream;
+                
+            } catch (err) {
+                console.error("Camera Switch Error:", err);
+                alert("Failed to flip camera. Mobile might not support it.");
+            }
+        };
+
+        // Draggable Video Logic
         const localVid = document.getElementById('local-video');
         let isDragging = false, startX, startY, currentX = 0, currentY = 0;
         function dragStart(e) {
