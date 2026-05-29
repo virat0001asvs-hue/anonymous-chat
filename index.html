@@ -6,6 +6,7 @@
     <title>WebRTC Elite Tunnel</title>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
+    <!-- 🎨 ADVANCED CSS STYLING -->
     <style>
         :root { 
             --bg-gradient: linear-gradient(135deg, #050811 0%, #0b1329 100%); 
@@ -16,18 +17,22 @@
             --success-green: #22c55e; 
         }
 
-        body { background: var(--bg-gradient); color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100dvh; margin: 0; overflow: hidden; touch-action: manipulation; }
+        /* FIX: Google Translate Banner Hide */
+        body { background: var(--bg-gradient); color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100dvh; margin: 0; overflow: hidden; touch-action: manipulation; top: 0px !important; }
+        .goog-te-banner-frame.skiptranslate { display: none !important; }
 
-        .window-panel { background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 20px; padding: 1.2rem; width: 92%; max-width: 450px; max-height: 98dvh; box-shadow: 0 20px 40px rgba(0,0,0,0.5); display: flex; flex-direction: column; box-sizing: border-box; }
+        .window-panel { background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 20px; padding: 1.2rem; width: 92%; max-width: 450px; max-height: 98dvh; box-shadow: 0 20px 40px rgba(0,0,0,0.5); display: flex; flex-direction: column; box-sizing: border-box; position: relative; z-index: 10; }
         .hidden { display: none !important; }
 
         h2 { margin-top: 0; font-size: 1.2rem; text-align: center; color: #fff; margin-bottom: 1rem; flex-shrink: 0; }
         .input-group { margin-bottom: 1rem; }
         label { display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.4rem; font-weight: 600; text-transform: uppercase; }
-        input:not([type="file"]) { width: 100%; padding: 14px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.4); color: #fff; box-sizing: border-box; outline: none; font-size: 1rem; }
-        input:focus { border-color: var(--neon-cyan); }
+        input:not([type="file"]), textarea { width: 100%; padding: 14px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.4); color: #fff; box-sizing: border-box; outline: none; font-size: 1rem; font-family: inherit; }
+        input:focus, textarea:focus { border-color: var(--neon-cyan); }
 
         .primary-btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 1rem; transition: 0.2s; color: white; margin-top: 5px; background: var(--neon-cyan); }
+        .secondary-btn { width: 100%; padding: 12px; border: 1px solid var(--glass-border); border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 0.9rem; transition: 0.2s; color: #94a3b8; margin-top: 10px; background: transparent; }
+        .secondary-btn:hover { background: rgba(255,255,255,0.05); color: white; }
         .btn-kill { width: 100%; padding: 14px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 1rem; transition: 0.2s; color: var(--danger-red); margin-top: 15px; margin-bottom: 5px; background: rgba(239, 68, 68, 0.2); border: 1px solid var(--danger-red); flex-shrink: 0; }
 
         .prime-box { background: rgba(0,0,0,0.5); padding: 15px; border-radius: 12px; text-align: center; margin-bottom: 1.5rem; border: 1px solid var(--neon-cyan); }
@@ -50,8 +55,10 @@
         /* 🎥 FULLSCREEN VIDEO UI */
         #video-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; background: #111; z-index: 2000; overflow: hidden; }
         #remote-video { width: 100%; height: 100%; object-fit: cover; }
-        #local-video { position: absolute; top: 30px; right: 20px; width: 100px; height: 140px; object-fit: cover; border-radius: 12px; border: 2px solid rgba(255,255,255,0.5); box-shadow: 0 10px 30px rgba(0,0,0,0.8); z-index: 2001; background: #222; cursor: grab; touch-action: none; will-change: transform; }
-        #local-video:active { cursor: grabbing; }
+        #local-video-wrapper { position: absolute; top: 30px; right: 20px; width: 100px; height: 140px; border-radius: 12px; border: 2px solid rgba(255,255,255,0.5); box-shadow: 0 10px 30px rgba(0,0,0,0.8); z-index: 2001; background: #222; cursor: grab; touch-action: none; will-change: transform; overflow: hidden; }
+        #local-video-wrapper:active { cursor: grabbing; }
+        #local-video { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; transition: transform 0.3s ease; }
+        .mirror-feed { transform: scaleX(-1); }
 
         .call-controls { position: absolute; bottom: 30px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 15px; z-index: 2002; padding: 0 20px; box-sizing: border-box; }
         
@@ -67,7 +74,7 @@
         
         #end-call-btn { background: var(--danger-red); color: white; padding: 16px 40px; border-radius: 30px; border: none; font-size: 1.1rem; font-weight: bold; box-shadow: 0 10px 20px rgba(239, 68, 68, 0.4); cursor: pointer; }
 
-        /* Incoming Call Modal */
+        /* Modals */
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 3000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(8px); }
         .call-box { background: #0f172a; padding: 2.5rem; border-radius: 24px; text-align: center; border: 1px solid rgba(255,255,255,0.1); width: 85%; max-width: 350px; box-shadow: 0 0 50px rgba(14, 165, 233, 0.3); }
         #call-title { color: white; font-size: 1.2rem; margin-bottom: 20px; }
@@ -78,9 +85,47 @@
 
         #image-modal img { max-width: 95vw; max-height: 90dvh; border-radius: 12px; object-fit: contain; }
         .close-modal { position: absolute; top: 15px; right: 15px; color: white; font-size: 40px; cursor: pointer; z-index: 3001; line-height: 1; }
+
+        /* FOOTER & TUTORIAL STYLES */
+        .dev-footer { position: fixed; bottom: 15px; width: 100%; text-align: center; color: #64748b; font-size: 0.8rem; z-index: 5; font-weight: 500; letter-spacing: 0.5px; }
+        .dev-footer a { color: var(--neon-cyan); text-decoration: none; font-weight: bold; margin-left: 5px; transition: 0.2s; }
+        
+        .tutorial-content { text-align: left; padding: 1.5rem; max-height: 75vh; overflow-y: auto; }
+        .tutorial-content h3 { color: var(--neon-cyan); margin-top: 0; text-align: center; }
+        .tutorial-content p { color: #cbd5e1; font-size: 0.95rem; line-height: 1.5; margin-bottom: 10px; }
+        .tutorial-content ol { color: #f8fafc; padding-left: 20px; margin-bottom: 20px; }
+        .tutorial-content li { margin-bottom: 8px; }
+        
+        /* ✨ FIX: PREMIUM GOOGLE TRANSLATE SEARCHABLE DROPDOWN ✨ */
+        #google_translate_element { margin-bottom: 15px; text-align: center; width: 100%; }
+        .goog-te-gadget { color: transparent !important; font-size: 0 !important; } /* Hide powered by google text */
+        .goog-te-gadget .goog-logo-link { display: none !important; }
+        #google_translate_element select {
+            width: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            color: #fff;
+            border: 1px solid var(--neon-cyan);
+            border-radius: 12px;
+            padding: 12px;
+            font-size: 1rem;
+            outline: none;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        #google_translate_element select option { background-color: #0f172a; color: #fff; }
     </style>
 </head>
 <body>
+    <!-- 🌐 FIX: NATIVE SEARCHABLE TRANSLATE DROPDOWN -->
+    <script type="text/javascript">
+        function googleTranslateElementInit() {
+            // Removed SIMPLE layout to force the native searchable dropdown
+            new google.translate.TranslateElement({pageLanguage: 'en'}, 'google_translate_element');
+        }
+    </script>
+    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+    <!-- SCREEN 1: GATEWAY -->
     <div id="screen-auth" class="window-panel">
         <h2>WebRTC Tunnel</h2>
         <div class="input-group">
@@ -92,8 +137,10 @@
             <input type="password" id="secret-key" placeholder="Enter secret key">
         </div>
         <button onclick="window.sendSecurePing()" class="primary-btn">Initiate P2P Handshake</button>
+        <button onclick="window.openTutorial()" class="secondary-btn">📖 How to Use?</button>
     </div>
 
+    <!-- SCREEN 2: HANDSHAKE -->
     <div id="screen-handshake" class="window-panel hidden">
         <h2>Handshake Protocol</h2>
         <div class="prime-box">
@@ -107,6 +154,7 @@
         <button onclick="window.verifyPrimeConnect()" class="primary-btn">Establish Tunnel</button>
     </div>
 
+    <!-- SCREEN 3: CHAT UI -->
     <div id="screen-chat" class="window-panel hidden" style="height: 100dvh; width: 100vw; border-radius: 0; max-width: 100%; border: none; padding: 1rem;">
         <h2>E2EE Network Live</h2>
         <div id="chat-logs">
@@ -123,9 +171,12 @@
         <button class="btn-kill" onclick="window.triggerKillSwitch()">Purge Connection</button>
     </div>
 
+    <!-- FULLSCREEN VIDEO UI -->
     <div id="video-container" class="hidden">
         <video id="remote-video" autoplay playsinline></video>
-        <video id="local-video" autoplay playsinline muted></video>
+        <div id="local-video-wrapper">
+            <video id="local-video" autoplay playsinline muted></video>
+        </div>
         
         <div class="call-controls">
             <div id="advanced-controls" class="advanced-controls hidden">
@@ -148,6 +199,7 @@
         </div>
     </div>
 
+    <!-- INCOMING CALL MODAL -->
     <div id="incoming-call-modal" class="modal hidden">
         <div class="modal-content call-box">
             <h3 id="call-title">Incoming Call...</h3>
@@ -158,11 +210,51 @@
         </div>
     </div>
 
+    <!-- IMAGE ZOOM MODAL -->
     <div id="image-modal" class="modal hidden" onclick="window.closeModal()">
         <span class="close-modal">&times;</span>
         <img class="modal-content" id="modal-img">
     </div>
 
+    <!-- TUTORIAL MODAL -->
+    <div id="tutorial-modal" class="modal hidden">
+        <div class="modal-content call-box tutorial-content">
+            <h3>📖 How to Use?</h3>
+            
+            <!-- ✨ TRANSLATE DROPDOWN CONTAINER ✨ -->
+            <div id="google_translate_element"></div>
+            
+            <p>Welcome to the Elite P2P Encrypted Network. Follow these steps to connect with a peer:</p>
+            <ol>
+                <li><strong>Target ID:</strong> Both you and your friend must enter the exact same Target Identifier (e.g., "Agent007").</li>
+                <li><strong>Private Key:</strong> Both must enter the same secret password.</li>
+                <li><strong>Initiate:</strong> One person clicks "Initiate P2P Handshake".</li>
+                <li><strong>Confirm:</strong> The other person will receive a Prime Token on their screen. Enter it to verify.</li>
+                <li><strong>Connected:</strong> Once verified, your military-grade E2EE tunnel is active! You can now call, chat, and share media.</li>
+            </ol>
+            <button onclick="window.closeTutorial()" class="primary-btn">Understood, Let's Go!</button>
+        </div>
+    </div>
+
+    <!-- FEEDBACK MODAL -->
+    <div id="feedback-modal" class="modal hidden">
+        <div class="modal-content call-box tutorial-content">
+            <h3>💬 Give Feedback</h3>
+            <p>Report bugs or request new features directly to the developer.</p>
+            <textarea id="feedback-text" rows="4" placeholder="Type your issue or feedback here..."></textarea>
+            <div class="call-actions">
+                <button onclick="window.sendFeedback()" class="btn-accept">📤 Send via Email</button>
+                <button onclick="window.closeFeedback()" class="btn-reject">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DEV FOOTER -->
+    <div class="dev-footer" id="dev-footer">
+        Developed by it.txt 😉 | <a href="#" onclick="window.openFeedback(); return false;">Give Feedback</a>
+    </div>
+
+    <!-- 🧠 ALL JAVASCRIPT LOGIC HERE -->
     <script>
         const socket = io(window.location.origin); 
         let activePrime = null, isInitiator = false;
@@ -183,6 +275,20 @@
             ] 
         };
 
+        window.openTutorial = function() { document.getElementById('tutorial-modal').classList.remove('hidden'); }
+        window.closeTutorial = function() { document.getElementById('tutorial-modal').classList.add('hidden'); }
+        window.openFeedback = function() { document.getElementById('feedback-modal').classList.remove('hidden'); }
+        window.closeFeedback = function() { document.getElementById('feedback-modal').classList.add('hidden'); }
+        
+        window.sendFeedback = function() {
+            const text = document.getElementById('feedback-text').value;
+            if(!text.trim()) return alert("Please write something first!");
+            const mailtoLink = `mailto:lappykumar98@gmail.com?subject=Feedback for WebRTC Elite Tunnel&body=${encodeURIComponent(text)}`;
+            window.location.href = mailtoLink;
+            window.closeFeedback();
+            document.getElementById('feedback-text').value = '';
+        }
+
         window.sendSecurePing = function() {
             isInitiator = true;
             const targetId = document.getElementById('phone-number').value.trim();
@@ -192,6 +298,7 @@
             socket.emit('global_secure_ping', { prime: activePrime, targetId: targetId });
 
             document.getElementById('screen-auth').classList.add('hidden');
+            document.getElementById('dev-footer').classList.add('hidden');
             document.getElementById('screen-handshake').classList.remove('hidden');
             document.getElementById('display-prime').innerText = activePrime;
         };
@@ -199,6 +306,7 @@
         socket.on('global_incoming_ping', (data) => {
             activePrime = data.prime;
             document.getElementById('screen-auth').classList.add('hidden');
+            document.getElementById('dev-footer').classList.add('hidden');
             document.getElementById('screen-handshake').classList.remove('hidden');
             document.getElementById('display-prime').innerText = data.prime;
         });
@@ -280,17 +388,20 @@
                     document.getElementById('call-title').innerText = `Incoming ${data.callType ? 'Video' : 'Voice'} Call...`;
                     document.getElementById('incoming-call-modal').classList.remove('hidden');
                 } 
-                // BUG FIX: ALWAYS SHOW UI ON CONNECTION, EVEN IF MEDIA FAILS
                 else if(data.type === 'call_accepted') {
                     window.appendMsg("Call Connected.", "system-msg");
                     
-                    document.getElementById('video-container').classList.remove('hidden');
-                    document.getElementById('advanced-controls').classList.remove('hidden');
-                    document.getElementById('switch-cam-btn').style.display = currentCallType ? "flex" : "none";
-                    document.getElementById('quality-box').style.display = currentCallType ? "flex" : "none";
-
+                    let mediaSuccess = true;
                     if(!localStream) {
-                        await startMedia(currentCallType);
+                        mediaSuccess = await startMedia(currentCallType);
+                    }
+                    
+                    if(mediaSuccess) {
+                        document.getElementById('advanced-controls').classList.remove('hidden');
+                        document.getElementById('switch-cam-btn').style.display = currentCallType ? "flex" : "none";
+                        document.getElementById('quality-box').style.display = currentCallType ? "flex" : "none";
+                    } else {
+                        window.endCall(true); 
                     }
                 } else if(data.type === 'call_rejected') {
                     window.appendMsg("Call Declined.", "system-msg");
@@ -311,18 +422,16 @@
             currentCallType = videoEnabled;
             window.appendMsg(`Ringing ${videoEnabled ? 'Video' : 'Voice'}...`, "system-msg");
             
-            document.getElementById('video-container').classList.remove('hidden'); // Show End Call instantly
+            document.getElementById('video-container').classList.remove('hidden'); 
             
             const success = await startMedia(videoEnabled);
             if(success) socket.emit('webrtc_signaling', { type: 'call_request', callType: videoEnabled });
             else document.getElementById('video-container').classList.add('hidden');
         };
 
-        // BUG FIX: Show UI before even attempting camera, so user can hang up
         window.acceptCall = async function() {
             document.getElementById('incoming-call-modal').classList.add('hidden');
             
-            // ALWAYS SHOW BUTTONS
             document.getElementById('video-container').classList.remove('hidden');
             document.getElementById('advanced-controls').classList.remove('hidden');
             document.getElementById('switch-cam-btn').style.display = currentCallType ? "flex" : "none";
@@ -344,6 +453,15 @@
             return { width: { ideal: 1280 }, frameRate: { ideal: 30, max: 30 }, bitrate: 1500000 };
         }
 
+        function applyMirrorLogic() {
+            const localVid = document.getElementById('local-video');
+            if(currentFacingMode === 'user') {
+                localVid.classList.add('mirror-feed');
+            } else {
+                localVid.classList.remove('mirror-feed');
+            }
+        }
+
         async function startMedia(videoEnabled) {
             try {
                 const q = getQualityConstraints();
@@ -357,6 +475,7 @@
                 };
                 localStream = await navigator.mediaDevices.getUserMedia(constraints);
                 document.getElementById('local-video').srcObject = localStream;
+                applyMirrorLogic(); 
 
                 localStream.getTracks().forEach(track => {
                     const sender = peerConnection.addTrack(track, localStream);
@@ -397,6 +516,7 @@
                 oldTrack.stop(); 
                 localStream.addTrack(newVideoTrack);
                 document.getElementById('local-video').srcObject = localStream;
+                applyMirrorLogic(); 
             } catch (err) {
                 console.error("Track Update Error:", err);
             }
@@ -404,7 +524,6 @@
 
         window.changeQuality = function() { updateVideoTrack(); };
         
-        // BUG FIX: Null check for camera flip
         window.switchCamera = function() { 
             if(!localStream || localStream.getVideoTracks().length === 0) return alert("No active camera to switch!");
             currentFacingMode = (currentFacingMode === 'user') ? 'environment' : 'user';
@@ -430,7 +549,6 @@
             }
         };
 
-        // BUG FIX: Null check for mute
         window.toggleMute = function() {
             if(localStream && localStream.getAudioTracks().length > 0) {
                 isMuted = !isMuted;
@@ -448,7 +566,7 @@
             document.getElementById('remote-video').volume = val;
         };
 
-        const localVid = document.getElementById('local-video');
+        const localVidWrapper = document.getElementById('local-video-wrapper');
         let isDragging = false, startX, startY, currentX = 0, currentY = 0;
         function dragStart(e) {
             if(e.type === "touchstart") { startX = e.touches[0].clientX - currentX; startY = e.touches[0].clientY - currentY; } 
@@ -461,9 +579,9 @@
             e.preventDefault();
             if(e.type === "touchmove") { currentX = e.touches[0].clientX - startX; currentY = e.touches[0].clientY - startY; } 
             else { currentX = e.clientX - startX; currentY = e.clientY - startY; }
-            localVid.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
+            localVidWrapper.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
         }
-        localVid.addEventListener('mousedown', dragStart); localVid.addEventListener('touchstart', dragStart, {passive: false});
+        localVidWrapper.addEventListener('mousedown', dragStart); localVidWrapper.addEventListener('touchstart', dragStart, {passive: false});
         window.addEventListener('mouseup', dragEnd); window.addEventListener('touchend', dragEnd);
         window.addEventListener('mousemove', drag); window.addEventListener('touchmove', drag, {passive: false});
 
