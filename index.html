@@ -4,9 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>WebRTC Elite Tunnel</title>
+    
+    <link rel="manifest" href="/manifest.json">
+    
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
-    <!-- 🎨 ADVANCED CSS STYLING -->
     <style>
         :root { 
             --bg-gradient: linear-gradient(135deg, #050811 0%, #0b1329 100%); 
@@ -17,7 +19,6 @@
             --success-green: #22c55e; 
         }
 
-        /* FIX: Google Translate Banner Hide */
         body { background: var(--bg-gradient); color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100dvh; margin: 0; overflow: hidden; touch-action: manipulation; top: 0px !important; }
         .goog-te-banner-frame.skiptranslate { display: none !important; }
 
@@ -86,7 +87,6 @@
         #image-modal img { max-width: 95vw; max-height: 90dvh; border-radius: 12px; object-fit: contain; }
         .close-modal { position: absolute; top: 15px; right: 15px; color: white; font-size: 40px; cursor: pointer; z-index: 3001; line-height: 1; }
 
-        /* FOOTER & TUTORIAL STYLES */
         .dev-footer { position: fixed; bottom: 15px; width: 100%; text-align: center; color: #64748b; font-size: 0.8rem; z-index: 5; font-weight: 500; letter-spacing: 0.5px; }
         .dev-footer a { color: var(--neon-cyan); text-decoration: none; font-weight: bold; margin-left: 5px; transition: 0.2s; }
         
@@ -96,36 +96,21 @@
         .tutorial-content ol { color: #f8fafc; padding-left: 20px; margin-bottom: 20px; }
         .tutorial-content li { margin-bottom: 8px; }
         
-        /* ✨ FIX: PREMIUM GOOGLE TRANSLATE SEARCHABLE DROPDOWN ✨ */
         #google_translate_element { margin-bottom: 15px; text-align: center; width: 100%; }
-        .goog-te-gadget { color: transparent !important; font-size: 0 !important; } /* Hide powered by google text */
+        .goog-te-gadget { color: transparent !important; font-size: 0 !important; } 
         .goog-te-gadget .goog-logo-link { display: none !important; }
-        #google_translate_element select {
-            width: 100%;
-            background-color: rgba(0, 0, 0, 0.6);
-            color: #fff;
-            border: 1px solid var(--neon-cyan);
-            border-radius: 12px;
-            padding: 12px;
-            font-size: 1rem;
-            outline: none;
-            font-weight: bold;
-            cursor: pointer;
-        }
+        #google_translate_element select { width: 100%; background-color: rgba(0, 0, 0, 0.6); color: #fff; border: 1px solid var(--neon-cyan); border-radius: 12px; padding: 12px; font-size: 1rem; outline: none; font-weight: bold; cursor: pointer; }
         #google_translate_element select option { background-color: #0f172a; color: #fff; }
     </style>
 </head>
 <body>
-    <!-- 🌐 FIX: NATIVE SEARCHABLE TRANSLATE DROPDOWN -->
     <script type="text/javascript">
         function googleTranslateElementInit() {
-            // Removed SIMPLE layout to force the native searchable dropdown
             new google.translate.TranslateElement({pageLanguage: 'en'}, 'google_translate_element');
         }
     </script>
     <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 
-    <!-- SCREEN 1: GATEWAY -->
     <div id="screen-auth" class="window-panel">
         <h2>WebRTC Tunnel</h2>
         <div class="input-group">
@@ -140,7 +125,6 @@
         <button onclick="window.openTutorial()" class="secondary-btn">📖 How to Use?</button>
     </div>
 
-    <!-- SCREEN 2: HANDSHAKE -->
     <div id="screen-handshake" class="window-panel hidden">
         <h2>Handshake Protocol</h2>
         <div class="prime-box">
@@ -154,7 +138,6 @@
         <button onclick="window.verifyPrimeConnect()" class="primary-btn">Establish Tunnel</button>
     </div>
 
-    <!-- SCREEN 3: CHAT UI -->
     <div id="screen-chat" class="window-panel hidden" style="height: 100dvh; width: 100vw; border-radius: 0; max-width: 100%; border: none; padding: 1rem;">
         <h2>E2EE Network Live</h2>
         <div id="chat-logs">
@@ -171,7 +154,6 @@
         <button class="btn-kill" onclick="window.triggerKillSwitch()">Purge Connection</button>
     </div>
 
-    <!-- FULLSCREEN VIDEO UI -->
     <div id="video-container" class="hidden">
         <video id="remote-video" autoplay playsinline></video>
         <div id="local-video-wrapper">
@@ -199,7 +181,6 @@
         </div>
     </div>
 
-    <!-- INCOMING CALL MODAL -->
     <div id="incoming-call-modal" class="modal hidden">
         <div class="modal-content call-box">
             <h3 id="call-title">Incoming Call...</h3>
@@ -210,20 +191,15 @@
         </div>
     </div>
 
-    <!-- IMAGE ZOOM MODAL -->
     <div id="image-modal" class="modal hidden" onclick="window.closeModal()">
         <span class="close-modal">&times;</span>
         <img class="modal-content" id="modal-img">
     </div>
 
-    <!-- TUTORIAL MODAL -->
     <div id="tutorial-modal" class="modal hidden">
         <div class="modal-content call-box tutorial-content">
             <h3>📖 How to Use?</h3>
-            
-            <!-- ✨ TRANSLATE DROPDOWN CONTAINER ✨ -->
             <div id="google_translate_element"></div>
-            
             <p>Welcome to the Elite P2P Encrypted Network. Follow these steps to connect with a peer:</p>
             <ol>
                 <li><strong>Target ID:</strong> Both you and your friend must enter the exact same Target Identifier (e.g., "Agent007").</li>
@@ -236,7 +212,6 @@
         </div>
     </div>
 
-    <!-- FEEDBACK MODAL -->
     <div id="feedback-modal" class="modal hidden">
         <div class="modal-content call-box tutorial-content">
             <h3>💬 Give Feedback</h3>
@@ -249,12 +224,21 @@
         </div>
     </div>
 
-    <!-- DEV FOOTER -->
+    <div id="pwa-install-modal" class="modal hidden">
+        <div class="modal-content call-box">
+            <h3>📱 Add to Home Screen?</h3>
+            <p>Want to run this app butter-smooth directly from your home screen without a browser?</p>
+            <div class="call-actions">
+                <button onclick="window.triggerPWAInstall()" class="btn-accept">📥 Download</button>
+                <button onclick="window.closePWAModal()" class="btn-reject">Later</button>
+            </div>
+        </div>
+    </div>
+
     <div class="dev-footer" id="dev-footer">
         Developed by it.txt 😉 | <a href="#" onclick="window.openFeedback(); return false;">Give Feedback</a>
     </div>
 
-    <!-- 🧠 ALL JAVASCRIPT LOGIC HERE -->
     <script>
         const socket = io(window.location.origin); 
         let activePrime = null, isInitiator = false;
@@ -267,6 +251,38 @@
 
         let isMuted = false;
         let currentFacingMode = 'user'; 
+
+        // ✨ NEW: PWA Installation Event Handler
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault(); // Prevents browser from showing native ugly banner
+            deferredPrompt = e; // Save event for later use
+            // Automatically show our custom premium modal
+            document.getElementById('pwa-install-modal').classList.remove('hidden');
+        });
+
+        window.triggerPWAInstall = async function() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt(); // Show native prompt
+                const { outcome } = await deferredPrompt.userChoice;
+                console.log(`User installation choice: ${outcome}`);
+                deferredPrompt = null;
+            }
+            window.closePWAModal();
+        };
+
+        window.closePWAModal = function() {
+            document.getElementById('pwa-install-modal').classList.add('hidden');
+        };
+
+        // Register Service Worker for PWA compliance
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('Service Worker Live!'))
+                    .catch(err => console.log('Service Worker Failed!', err));
+            });
+        }
 
         const iceConfiguration = { 
             iceServers: [
@@ -283,7 +299,7 @@
         window.sendFeedback = function() {
             const text = document.getElementById('feedback-text').value;
             if(!text.trim()) return alert("Please write something first!");
-            const mailtoLink = `mailto:lappykumar98@gmail.com?subject=Feedback for WebRTC Elite Tunnel&body=${encodeURIComponent(text)}`;
+            const mailtoLink = `mailto:devidtom618@gmail.com?subject=Feedback for WebRTC Elite Tunnel&body=${encodeURIComponent(text)}`;
             window.location.href = mailtoLink;
             window.closeFeedback();
             document.getElementById('feedback-text').value = '';
@@ -391,17 +407,13 @@
                 else if(data.type === 'call_accepted') {
                     window.appendMsg("Call Connected.", "system-msg");
                     
-                    let mediaSuccess = true;
+                    document.getElementById('video-container').classList.remove('hidden');
+                    document.getElementById('advanced-controls').classList.remove('hidden');
+                    document.getElementById('switch-cam-btn').style.display = currentCallType ? "flex" : "none";
+                    document.getElementById('quality-box').style.display = currentCallType ? "flex" : "none";
+
                     if(!localStream) {
-                        mediaSuccess = await startMedia(currentCallType);
-                    }
-                    
-                    if(mediaSuccess) {
-                        document.getElementById('advanced-controls').classList.remove('hidden');
-                        document.getElementById('switch-cam-btn').style.display = currentCallType ? "flex" : "none";
-                        document.getElementById('quality-box').style.display = currentCallType ? "flex" : "none";
-                    } else {
-                        window.endCall(true); 
+                        await startMedia(currentCallType);
                     }
                 } else if(data.type === 'call_rejected') {
                     window.appendMsg("Call Declined.", "system-msg");
