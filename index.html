@@ -56,9 +56,37 @@
 
         .message { padding: 10px 14px; border-radius: 14px; max-width: 80%; font-size: 0.95rem; word-wrap: break-word; position: relative; transition: transform 0.2s ease; }
         .system-msg { background: rgba(0,0,0,0.5); color: #94a3b8; align-self: center; font-size: 0.85rem; text-align: center; border: 1px solid var(--glass-border); font-weight: bold; }
-        .sent-msg { background: var(--neon-cyan); color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+        
+        /* ✨ FIX 3: PREMIUM GOLDEN BORDER ANIMATION FOR SENT MESSAGES ✨ */
+        .sent-msg { 
+            background-image: linear-gradient(var(--neon-cyan), var(--neon-cyan)), linear-gradient(90deg, #FFDF00, #D4AF37, #FFF8DC, #D4AF37, #FFDF00);
+            background-origin: border-box;
+            background-clip: padding-box, border-box;
+            border: 2px solid transparent;
+            background-size: 200% 100%;
+            animation: premiumGold 3s linear infinite;
+            color: #fff;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.25);
+        }
+        @keyframes premiumGold {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 200% 50%; }
+        }
+
         .recv-msg { background: rgba(255,255,255,0.1); color: #fff; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid var(--glass-border); }
-        .media-content { max-width: 100%; border-radius: 8px; margin-top: 5px; cursor: zoom-in; }
+        
+        /* ✨ FIX 1: MEDIA CONTENT SIZE CONSTRAINT ✨ */
+        .media-content { 
+            max-width: 100%; 
+            max-height: 250px; 
+            object-fit: cover; 
+            border-radius: 8px; 
+            margin-top: 5px; 
+            cursor: zoom-in; 
+            border: 1px solid rgba(255,255,255,0.2);
+        }
 
         .msg-meta { font-size: 0.7rem; color: rgba(255,255,255,0.7); margin-top: 6px; display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
         .action-btn { cursor: pointer; font-weight: bold; background: rgba(0,0,0,0.2); padding: 3px 8px; border-radius: 6px; transition: 0.2s; }
@@ -66,7 +94,7 @@
         .seen-status { font-weight: bold; }
         .progress-text { color: var(--neon-cyan); font-weight: bold; letter-spacing: 1px; }
 
-        /* ✨ NEW: TYPING & REPLY STYLES ✨ */
+        /* TYPING & REPLY STYLES */
         .typing-indicator { font-size: 0.8rem; color: var(--success-green); font-style: italic; padding: 2px 10px; margin-bottom: 5px; font-weight: bold; display: none; }
         .reply-preview { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.6); padding: 8px 12px; border-left: 4px solid var(--success-green); border-radius: 8px; font-size: 0.85rem; color: #cbd5e1; margin-bottom: 5px; border: 1px solid var(--glass-border); }
         .quoted-msg { background: rgba(0,0,0,0.3); border-left: 3px solid var(--success-green); padding: 6px 10px; border-radius: 4px; font-size: 0.85rem; margin-bottom: 8px; color: #cbd5e1; font-style: italic; }
@@ -159,7 +187,6 @@
             <div class="message system-msg" id="status-msg">⌛ Connecting Tunnel... Waiting for peer.</div>
         </div>
         
-        <!-- ✨ NEW: TYPING & REPLY UI ✨ -->
         <div id="typing-indicator" class="typing-indicator">Peer is typing...</div>
         
         <div id="reply-preview" class="reply-preview hidden">
@@ -175,6 +202,7 @@
             <input type="text" id="msg-input" placeholder="Type a message..." onkeypress="window.checkEnter(event)">
             <button id="send-btn" onclick="window.sendMessage()">➤</button>
         </div>
+        <!-- ✨ FIX 2: POP-UP WARNING BEFORE PURGE -->
         <button class="btn-kill" onclick="window.triggerKillSwitch()">Purge Connection</button>
     </div>
 
@@ -268,7 +296,6 @@
         let isMuted = false;
         let currentFacingMode = 'user'; 
 
-        // PWA Setup
         let deferredPrompt;
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault(); 
@@ -519,13 +546,10 @@
         window.addEventListener('mouseup', dragEnd); window.addEventListener('touchend', dragEnd);
         window.addEventListener('mousemove', drag); window.addEventListener('touchmove', drag, {passive: false});
 
-
-        // ✨ NEW: TYPING & REPLY VARIABLES ✨
         let isTyping = false;
         let typingTimer;
-        let currentReplyContext = null; // Stores what we are replying to
+        let currentReplyContext = null; 
 
-        // Detect Typing Event
         const msgInput = document.getElementById('msg-input');
         msgInput.addEventListener('input', () => {
             if(!dataChannel || dataChannel.readyState !== 'open') return;
@@ -540,7 +564,6 @@
             }, 1200);
         });
 
-        // Detect Swipe to Reply
         const chatLogs = document.getElementById('chat-logs');
         let touchStartX = 0, touchStartY = 0;
         
@@ -552,28 +575,19 @@
         chatLogs.addEventListener('touchend', e => {
             let touchEndX = e.changedTouches[0].screenX;
             let touchEndY = e.changedTouches[0].screenY;
-            
-            // If user swiped RIGHT horizontally (distance > 50px)
             if(touchEndX - touchStartX > 50 && Math.abs(touchEndY - touchStartY) < 30) {
                 const msgEl = e.target.closest('.message');
-                if(msgEl && !msgEl.classList.contains('system-msg')) {
-                    window.startReply(msgEl);
-                }
+                if(msgEl && !msgEl.classList.contains('system-msg')) { window.startReply(msgEl); }
             }
         });
 
-        // Double click for Desktop users to reply
         chatLogs.addEventListener('dblclick', e => {
             const msgEl = e.target.closest('.message');
-            if(msgEl && !msgEl.classList.contains('system-msg')) {
-                window.startReply(msgEl);
-            }
+            if(msgEl && !msgEl.classList.contains('system-msg')) { window.startReply(msgEl); }
         });
 
         window.startReply = function(msgEl) {
             let clone = msgEl.cloneNode(true);
-            
-            // Remove meta (time, buttons) and previous quotes so they don't get copied
             const meta = clone.querySelector('.msg-meta');
             const quoted = clone.querySelector('.quoted-msg');
             if(meta) meta.remove();
@@ -586,11 +600,7 @@
 
             if(snippet.length > 40) snippet = snippet.substring(0, 40) + "...";
 
-            currentReplyContext = {
-                id: msgEl.id.replace('msg-', ''),
-                text: snippet
-            };
-
+            currentReplyContext = { id: msgEl.id.replace('msg-', ''), text: snippet };
             document.getElementById('reply-text').innerText = "Replying to: " + snippet;
             document.getElementById('reply-preview').classList.remove('hidden');
             document.getElementById('msg-input').focus();
@@ -619,12 +629,10 @@
             const fileInput = document.getElementById('file-upload');
             const msgId = generateMsgId(); 
             
-            // Stop typing indicator immediately
             clearTimeout(typingTimer);
             isTyping = false;
             dataChannel.send(JSON.stringify({ type: 'typing', state: false }));
 
-            // Store reply context before clearing it
             const replyData = currentReplyContext;
 
             if(fileInput.files.length > 0) {
@@ -660,13 +668,13 @@
                 };
                 reader.readAsDataURL(file);
                 fileInput.value = ''; 
-                window.cancelReply(); // Clear reply box
+                window.cancelReply(); 
             }
             else if(input.value.trim()) {
                 window.appendMsg(input.value.trim(), 'sent-msg', msgId, replyData);
                 dataChannel.send(JSON.stringify({ type: 'text', text: input.value.trim(), msgId: msgId, replyTo: replyData }));
                 input.value = '';
-                window.cancelReply(); // Clear reply box
+                window.cancelReply(); 
             }
         };
 
@@ -675,17 +683,16 @@
         function handleIncomingData(rawData) {
             const parsed = JSON.parse(rawData);
             
-            // ✨ NEW: Catch Typing Events ✨
             if(parsed.type === 'typing') {
                 const ind = document.getElementById('typing-indicator');
                 ind.style.display = parsed.state ? 'block' : 'none';
                 if(parsed.state) {
                     const logs = document.getElementById('chat-logs');
-                    logs.scrollTop = logs.scrollHeight; // Auto scroll down to see it
+                    logs.scrollTop = logs.scrollHeight; 
                 }
             }
             else if(parsed.type === 'text') {
-                document.getElementById('typing-indicator').style.display = 'none'; // hide instantly
+                document.getElementById('typing-indicator').style.display = 'none'; 
                 window.appendMsg(parsed.text, 'recv-msg', parsed.msgId, parsed.replyTo);
                 dataChannel.send(JSON.stringify({ type: 'seen-ack', msgId: parsed.msgId }));
             }
@@ -718,7 +725,6 @@
             }
         }
 
-        // ✨ UPDATE: Inject Reply Quote in AppendMsg ✨
         window.appendMsg = function(text, type, msgId = null, replyData = null) {
             const logs = document.getElementById('chat-logs');
             if (!msgId && type !== 'system-msg') msgId = generateMsgId();
@@ -741,7 +747,6 @@
             logs.scrollTop = logs.scrollHeight;
         };
 
-        // ✨ UPDATE: Inject Reply Quote in DisplayMedia ✨
         window.displayMedia = function(base64Data, mimeType, type, msgId = null, replyData = null) {
             const logs = document.getElementById('chat-logs');
             if (!msgId) msgId = generateMsgId();
@@ -791,7 +796,13 @@
         window.openModal = function(imageSrc) { document.getElementById('image-modal').classList.remove('hidden'); document.getElementById('modal-img').src = imageSrc; };
         window.closeModal = function() { document.getElementById('image-modal').classList.add('hidden'); };
         window.checkEnter = function(e) { if(e.key === 'Enter') window.sendMessage(); };
-        window.triggerKillSwitch = function() { location.reload(); };
+        
+        // ✨ FIX 2: CONFIRMATION BEFORE PURGE
+        window.triggerKillSwitch = function() { 
+            if(confirm("Are you sure you want to exit and delete this chat?")) {
+                location.reload(); 
+            }
+        };
     </script>
 </body>
 </html>
