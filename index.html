@@ -57,7 +57,7 @@
         .message { padding: 10px 14px; border-radius: 14px; max-width: 80%; font-size: 0.95rem; word-wrap: break-word; position: relative; transition: transform 0.2s ease; }
         .system-msg { background: rgba(0,0,0,0.5); color: #94a3b8; align-self: center; font-size: 0.85rem; text-align: center; border: 1px solid var(--glass-border); font-weight: bold; }
         
-        /* ✨ FIX 3: PREMIUM GOLDEN BORDER ANIMATION FOR SENT MESSAGES ✨ */
+        /* PREMIUM GOLDEN BORDER ANIMATION FOR SENT MESSAGES */
         .sent-msg { 
             background-image: linear-gradient(var(--neon-cyan), var(--neon-cyan)), linear-gradient(90deg, #FFDF00, #D4AF37, #FFF8DC, #D4AF37, #FFDF00);
             background-origin: border-box;
@@ -77,7 +77,7 @@
 
         .recv-msg { background: rgba(255,255,255,0.1); color: #fff; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid var(--glass-border); }
         
-        /* ✨ FIX 1: MEDIA CONTENT SIZE CONSTRAINT ✨ */
+        /* MEDIA CONTENT SIZE CONSTRAINT */
         .media-content { 
             max-width: 100%; 
             max-height: 250px; 
@@ -202,11 +202,12 @@
             <input type="text" id="msg-input" placeholder="Type a message..." onkeypress="window.checkEnter(event)">
             <button id="send-btn" onclick="window.sendMessage()">➤</button>
         </div>
-        <!-- ✨ FIX 2: POP-UP WARNING BEFORE PURGE -->
+        
+        <!-- CALLING OUR NEW CUSTOM MODAL INSTEAD OF BROWSER CONFIRM -->
         <button class="btn-kill" onclick="window.triggerKillSwitch()">Purge Connection</button>
     </div>
 
-    <!-- FULLSCREEN VIDEO & MODALS (Kept Safe) -->
+    <!-- FULLSCREEN VIDEO & MODALS -->
     <div id="video-container" class="hidden">
         <video id="remote-video" autoplay playsinline></video>
         <div id="local-video-wrapper">
@@ -226,6 +227,18 @@
                 <div class="vol-slider-container">🔊 <input type="range" id="vol-slider" min="0" max="1" step="0.1" value="1" oninput="window.changeVolume(this.value)"></div>
             </div>
             <button onclick="window.endCall()" id="end-call-btn">🔴 End Call</button>
+        </div>
+    </div>
+
+    <!-- ✨ NEW: CUSTOM PURGE WARNING MODAL ✨ -->
+    <div id="purge-modal" class="modal hidden">
+        <div class="modal-content call-box">
+            <h3 style="color: var(--danger-red);">⚠️ Warning</h3>
+            <p>Are you sure you want to exit and delete this chat?</p>
+            <div class="call-actions">
+                <button onclick="window.executeKillSwitch()" class="btn-reject">Yes, Purge</button>
+                <button onclick="window.closePurgeModal()" class="btn-accept" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);">Cancel</button>
+            </div>
         </div>
     </div>
 
@@ -797,11 +810,15 @@
         window.closeModal = function() { document.getElementById('image-modal').classList.add('hidden'); };
         window.checkEnter = function(e) { if(e.key === 'Enter') window.sendMessage(); };
         
-        // ✨ FIX 2: CONFIRMATION BEFORE PURGE
-        window.triggerKillSwitch = function() { 
-            if(confirm("Are you sure you want to exit and delete this chat?")) {
-                location.reload(); 
-            }
+        // ✨ FIX 2: THE CUSTOM ELITE MODAL KILL SWITCH LOGIC ✨
+        window.triggerKillSwitch = function() {
+            document.getElementById('purge-modal').classList.remove('hidden');
+        };
+        window.closePurgeModal = function() {
+            document.getElementById('purge-modal').classList.add('hidden');
+        };
+        window.executeKillSwitch = function() {
+            location.reload(); 
         };
     </script>
 </body>
