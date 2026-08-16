@@ -57,36 +57,17 @@
         .message { padding: 10px 14px; border-radius: 14px; max-width: 80%; font-size: 0.95rem; word-wrap: break-word; position: relative; transition: transform 0.2s ease; }
         .system-msg { background: rgba(0,0,0,0.5); color: #94a3b8; align-self: center; font-size: 0.85rem; text-align: center; border: 1px solid var(--glass-border); font-weight: bold; }
         
-        /* PREMIUM GOLDEN BORDER ANIMATION FOR SENT MESSAGES */
         .sent-msg { 
             background-image: linear-gradient(var(--neon-cyan), var(--neon-cyan)), linear-gradient(90deg, #FFDF00, #D4AF37, #FFF8DC, #D4AF37, #FFDF00);
-            background-origin: border-box;
-            background-clip: padding-box, border-box;
-            border: 2px solid transparent;
-            background-size: 200% 100%;
-            animation: premiumGold 3s linear infinite;
-            color: #fff;
-            align-self: flex-end;
-            border-bottom-right-radius: 4px;
-            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.25);
+            background-origin: border-box; background-clip: padding-box, border-box;
+            border: 2px solid transparent; background-size: 200% 100%; animation: premiumGold 3s linear infinite;
+            color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.25);
         }
-        @keyframes premiumGold {
-            0% { background-position: 0% 50%; }
-            100% { background-position: 200% 50%; }
-        }
+        @keyframes premiumGold { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
 
         .recv-msg { background: rgba(255,255,255,0.1); color: #fff; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid var(--glass-border); }
         
-        /* MEDIA CONTENT SIZE CONSTRAINT */
-        .media-content { 
-            max-width: 100%; 
-            max-height: 250px; 
-            object-fit: cover; 
-            border-radius: 8px; 
-            margin-top: 5px; 
-            cursor: zoom-in; 
-            border: 1px solid rgba(255,255,255,0.2);
-        }
+        .media-content { max-width: 100%; max-height: 250px; object-fit: cover; border-radius: 8px; margin-top: 5px; cursor: zoom-in; border: 1px solid rgba(255,255,255,0.2); }
 
         .msg-meta { font-size: 0.7rem; color: rgba(255,255,255,0.7); margin-top: 6px; display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
         .action-btn { cursor: pointer; font-weight: bold; background: rgba(0,0,0,0.2); padding: 3px 8px; border-radius: 6px; transition: 0.2s; }
@@ -94,12 +75,10 @@
         .seen-status { font-weight: bold; }
         .progress-text { color: var(--neon-cyan); font-weight: bold; letter-spacing: 1px; }
 
-        /* TYPING & REPLY STYLES */
         .typing-indicator { font-size: 0.8rem; color: var(--success-green); font-style: italic; padding: 2px 10px; margin-bottom: 5px; font-weight: bold; display: none; }
         .reply-preview { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.6); padding: 8px 12px; border-left: 4px solid var(--success-green); border-radius: 8px; font-size: 0.85rem; color: #cbd5e1; margin-bottom: 5px; border: 1px solid var(--glass-border); }
         .quoted-msg { background: rgba(0,0,0,0.3); border-left: 3px solid var(--success-green); padding: 6px 10px; border-radius: 4px; font-size: 0.85rem; margin-bottom: 8px; color: #cbd5e1; font-style: italic; }
 
-        /* Fullscreen Video UI */
         #video-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; background: #111; z-index: 2000; overflow: hidden; }
         #remote-video { width: 100%; height: 100%; object-fit: cover; }
         #local-video-wrapper { position: absolute; top: 30px; right: 20px; width: 100px; height: 140px; border-radius: 12px; border: 2px solid rgba(255,255,255,0.5); box-shadow: 0 10px 30px rgba(0,0,0,0.8); z-index: 2001; background: #222; cursor: grab; touch-action: none; overflow: hidden; }
@@ -142,7 +121,7 @@
 <body>
     <div id="inapp-warning" class="hidden">
         ⚠️ Instagram/Facebook Browser Detected!
-        <span class="warning-text">Tap the 3 dots (•••) at the top right and select <b>"Open in Chrome/System Browser"</b> to download the app.</span>
+        <span class="warning-text">Tap the 3 dots (•••) at the top right and select <b>"Open in Chrome/System Browser"</b>.</span>
         <button class="btn-dismiss-warning" onclick="document.getElementById('inapp-warning').classList.add('hidden')">Got it</button>
     </div>
 
@@ -203,7 +182,6 @@
             <button id="send-btn" onclick="window.sendMessage()">➤</button>
         </div>
         
-        <!-- CALLING OUR NEW CUSTOM MODAL INSTEAD OF BROWSER CONFIRM -->
         <button class="btn-kill" onclick="window.triggerKillSwitch()">Purge Connection</button>
     </div>
 
@@ -230,7 +208,7 @@
         </div>
     </div>
 
-    <!-- ✨ NEW: CUSTOM PURGE WARNING MODAL ✨ -->
+    <!-- CUSTOM PURGE WARNING MODAL -->
     <div id="purge-modal" class="modal hidden">
         <div class="modal-content call-box">
             <h3 style="color: var(--danger-red);">⚠️ Warning</h3>
@@ -242,6 +220,7 @@
         </div>
     </div>
 
+    <!-- OTHER MODALS -->
     <div id="incoming-call-modal" class="modal hidden">
         <div class="modal-content call-box">
             <h3 id="call-title">Incoming Call...</h3>
@@ -305,6 +284,7 @@
         let signalQueue = []; 
         let iceQueue = []; 
         let isNegotiating = false; 
+        let isProcessingSignal = false; // ✨ NEW: Bug Fix for Network Race Condition
 
         let isMuted = false;
         let currentFacingMode = 'user'; 
@@ -328,7 +308,17 @@
             window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(e => console.log(e)); });
         }
 
-        const iceConfiguration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun.cloudflare.com:3478' }] };
+        // ✨ ELITE FIX 1: JIO/AIRTEL TURN SERVER INJECTED ✨
+        const iceConfiguration = { 
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' }, 
+                { urls: 'stun:stun.cloudflare.com:3478' },
+                { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+                { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' }
+            ] 
+        };
+
+        const getTargetId = () => document.getElementById('phone-number').value.trim();
 
         window.openTutorial = function() { document.getElementById('tutorial-modal').classList.remove('hidden'); }
         window.closeTutorial = function() { document.getElementById('tutorial-modal').classList.add('hidden'); }
@@ -346,7 +336,7 @@
 
         window.sendSecurePing = function() {
             isInitiator = true;
-            const targetId = document.getElementById('phone-number').value.trim();
+            const targetId = getTargetId();
             if(!targetId) return alert("Target ID required!");
 
             activePrime = [982451653, 15485863, 32416190071][Math.floor(Math.random() * 3)];
@@ -358,6 +348,10 @@
         };
 
         socket.on('global_incoming_ping', (data) => {
+            const myTarget = getTargetId();
+            // ✨ ELITE FIX 2: IGNORE CROSS-TALK (Pings meant for someone else) ✨
+            if(myTarget && myTarget !== data.targetId) return;
+
             activePrime = data.prime;
             document.getElementById('screen-auth').classList.add('hidden');
             document.getElementById('dev-footer').classList.add('hidden');
@@ -367,8 +361,16 @@
 
         window.verifyPrimeConnect = async function() {
             const userInputPrime = document.getElementById('prime-input').value;
-            let userInputKey = document.getElementById('secret-key')?.value;
-            if(!userInputKey || parseInt(userInputPrime) !== activePrime) return alert("Handshake Failed!");
+            let userInputKey = document.getElementById('secret-key').value.trim();
+            
+            // ✨ ELITE FIX 3: PASSWORD PROMPT IF SCREEN SWITCHED FAST ✨
+            if(!userInputKey) {
+                userInputKey = prompt("🔐 Connection Locked! Enter Private Key to decrypt:");
+                if(userInputKey) document.getElementById('secret-key').value = userInputKey;
+            }
+
+            if(!userInputKey || parseInt(userInputPrime) !== activePrime) return alert("Handshake Failed! Check Prime or Key.");
+            
             document.getElementById('screen-handshake').classList.add('hidden');
             document.getElementById('screen-chat').classList.remove('hidden');
             window.scrollTo(0, 0);
@@ -378,25 +380,36 @@
         function initWebRTC() {
             peerConnection = new RTCPeerConnection(iceConfiguration);
             peerConnection.ontrack = (event) => { document.getElementById('remote-video').srcObject = event.streams[0]; };
+            
             peerConnection.onicecandidate = (event) => {
-                if(event.candidate) socket.emit('webrtc_signaling', { type: 'ice', candidate: event.candidate });
+                if(event.candidate) socket.emit('webrtc_signaling', { type: 'ice', candidate: event.candidate, targetId: getTargetId() });
             };
+            
             peerConnection.onnegotiationneeded = async () => {
                 if(isNegotiating) return;
                 isNegotiating = true;
                 try {
                     const offer = await peerConnection.createOffer();
                     await peerConnection.setLocalDescription(offer);
-                    socket.emit('webrtc_signaling', { type: 'offer', offer: peerConnection.localDescription });
+                    socket.emit('webrtc_signaling', { type: 'offer', offer: peerConnection.localDescription, targetId: getTargetId() });
                 } catch (err) {} finally { isNegotiating = false; }
             };
+            
             if(isInitiator) {
                 dataChannel = peerConnection.createDataChannel('cryptoTunnel');
                 setupDataChannel();
             } else {
                 peerConnection.ondatachannel = (event) => { dataChannel = event.channel; setupDataChannel(); };
             }
-            while(signalQueue.length > 0) processSignal(signalQueue.shift());
+            
+            // ✨ ELITE FIX 4: SAFE SEQUENTIAL SIGNAL PROCESSING ✨
+            isProcessingSignal = true;
+            (async () => {
+                while(signalQueue.length > 0) {
+                    await processSignal(signalQueue.shift());
+                }
+                isProcessingSignal = false;
+            })();
         }
 
         function processIceQueue() {
@@ -412,7 +425,7 @@
                     await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
                     const answer = await peerConnection.createAnswer();
                     await peerConnection.setLocalDescription(answer);
-                    socket.emit('webrtc_signaling', { type: 'answer', answer: peerConnection.localDescription });
+                    socket.emit('webrtc_signaling', { type: 'answer', answer: peerConnection.localDescription, targetId: getTargetId() });
                     processIceQueue(); 
                 } else if(data.type === 'answer') {
                     await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
@@ -441,8 +454,19 @@
         }
 
         socket.on('webrtc_signaling', async (data) => {
+            const myTarget = getTargetId();
+            if(data.targetId && myTarget && myTarget !== data.targetId) return;
+
             if(!peerConnection) { signalQueue.push(data); return; }
-            processSignal(data);
+            
+            signalQueue.push(data);
+            if(!isProcessingSignal) {
+                isProcessingSignal = true;
+                while(signalQueue.length > 0) {
+                    await processSignal(signalQueue.shift());
+                }
+                isProcessingSignal = false;
+            }
         });
 
         // MEDIA & CALLING Logic
@@ -452,7 +476,7 @@
             window.appendMsg(`Ringing ${videoEnabled ? 'Video' : 'Voice'}...`, "system-msg");
             document.getElementById('video-container').classList.remove('hidden'); 
             const success = await startMedia(videoEnabled);
-            if(success) socket.emit('webrtc_signaling', { type: 'call_request', callType: videoEnabled });
+            if(success) socket.emit('webrtc_signaling', { type: 'call_request', callType: videoEnabled, targetId: getTargetId() });
             else document.getElementById('video-container').classList.add('hidden');
         };
         window.acceptCall = async function() {
@@ -462,11 +486,11 @@
             document.getElementById('switch-cam-btn').style.display = currentCallType ? "flex" : "none";
             document.getElementById('quality-box').style.display = currentCallType ? "flex" : "none";
             const success = await startMedia(currentCallType);
-            socket.emit('webrtc_signaling', { type: 'call_accepted' });
+            socket.emit('webrtc_signaling', { type: 'call_accepted', targetId: getTargetId() });
         };
         window.rejectCall = function() {
             document.getElementById('incoming-call-modal').classList.add('hidden');
-            socket.emit('webrtc_signaling', { type: 'call_rejected' });
+            socket.emit('webrtc_signaling', { type: 'call_rejected', targetId: getTargetId() });
         };
         function getQualityConstraints() {
             const q = document.getElementById('video-quality').value;
@@ -527,7 +551,7 @@
             isMuted = false;
             document.getElementById('mute-btn').innerText = "🎤 Unmuted"; document.getElementById('mute-btn').style.background = "rgba(255,255,255,0.2)";
             document.getElementById('vol-slider').value = 1;
-            if(emitSignal) { socket.emit('webrtc_signaling', { type: 'call_ended' }); window.appendMsg("You ended the call.", 'system-msg'); }
+            if(emitSignal) { socket.emit('webrtc_signaling', { type: 'call_ended', targetId: getTargetId() }); window.appendMsg("You ended the call.", 'system-msg'); }
         };
         window.toggleMute = function() {
             if(localStream && localStream.getAudioTracks().length > 0) {
@@ -810,7 +834,6 @@
         window.closeModal = function() { document.getElementById('image-modal').classList.add('hidden'); };
         window.checkEnter = function(e) { if(e.key === 'Enter') window.sendMessage(); };
         
-        // ✨ FIX 2: THE CUSTOM ELITE MODAL KILL SWITCH LOGIC ✨
         window.triggerKillSwitch = function() {
             document.getElementById('purge-modal').classList.remove('hidden');
         };
