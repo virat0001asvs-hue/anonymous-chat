@@ -279,13 +279,9 @@
         let peerConnection, dataChannel, localStream;
         let currentCallType = null; 
         
-        // ✨ THE ULTIMATE BUG FIX: STRICT ROOM ISOLATION VARIABLES ✨
-        let sessionTargetId = null; 
-
         let signalQueue = []; 
         let iceQueue = []; 
         let isNegotiating = false; 
-        let isProcessingSignal = false; 
 
         let isMuted = false;
         let currentFacingMode = 'user'; 
@@ -309,12 +305,14 @@
             window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(e => console.log(e)); });
         }
 
+        // 🔥 THE ELITE STUN SERVERS (Fast Connection Guarantee) 🔥
         const iceConfiguration = { 
             iceServers: [
                 { urls: 'stun:stun.l.google.com:19302' }, 
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun2.l.google.com:19302' },
                 { urls: 'stun:stun.cloudflare.com:3478' },
-                { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-                { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' }
+                { urls: 'stun:global.stun.twilio.com:3478' }
             ] 
         };
 
@@ -334,13 +332,11 @@
 
         window.sendSecurePing = function() {
             isInitiator = true;
-            
-            // Lock the room ID for the initiator
-            sessionTargetId = document.getElementById('phone-number').value.trim();
-            if(!sessionTargetId) return alert("Target ID required!");
+            const targetId = document.getElementById('phone-number').value.trim();
+            if(!targetId) return alert("Target ID required!");
 
             activePrime = [982451653, 15485863, 32416190071][Math.floor(Math.random() * 3)];
-            socket.emit('global_secure_ping', { prime: activePrime, targetId: sessionTargetId });
+            socket.emit('global_secure_ping', { prime: activePrime, targetId: targetId });
             document.getElementById('screen-auth').classList.add('hidden');
             document.getElementById('dev-footer').classList.add('hidden');
             document.getElementById('screen-handshake').classList.remove('hidden');
@@ -349,11 +345,9 @@
 
         socket.on('global_incoming_ping', (data) => {
             const myTarget = document.getElementById('phone-number').value.trim();
+            // Basic check to avoid ping mixup
             if(myTarget && myTarget !== data.targetId) return;
 
-            // ✨ STRICT FIX: Lock the room ID for the receiver immediately ✨
-            sessionTargetId = data.targetId; 
-            
             activePrime = data.prime;
             document.getElementById('screen-auth').classList.add('hidden');
             document.getElementById('dev-footer').classList.add('hidden');
@@ -378,12 +372,13 @@
             initWebRTC();
         };
 
+        // 🔥 THE FAST WEBRTC ENGINE (Restored) 🔥
         function initWebRTC() {
             peerConnection = new RTCPeerConnection(iceConfiguration);
             peerConnection.ontrack = (event) => { document.getElementById('remote-video').srcObject = event.streams[0]; };
             
             peerConnection.onicecandidate = (event) => {
-                if(event.candidate) socket.emit('webrtc_signaling', { type: 'ice', candidate: event.candidate, targetId: sessionTargetId });
+                if(event.candidate) socket.emit('webrtc_signaling', { type: 'ice', candidate: event.candidate });
             };
             
             peerConnection.onnegotiationneeded = async () => {
@@ -392,7 +387,7 @@
                 try {
                     const offer = await peerConnection.createOffer();
                     await peerConnection.setLocalDescription(offer);
-                    socket.emit('webrtc_signaling', { type: 'offer', offer: peerConnection.localDescription, targetId: sessionTargetId });
+                    socket.emit('webrtc_signaling', { type: 'offer', offer: peerConnection.localDescription });
                 } catch (err) {} finally { isNegotiating = false; }
             };
             
@@ -403,11 +398,7 @@
                 peerConnection.ondatachannel = (event) => { dataChannel = event.channel; setupDataChannel(); };
             }
             
-            isProcessingSignal = true;
-            (async () => {
-                while(signalQueue.length > 0) { await processSignal(signalQueue.shift()); }
-                isProcessingSignal = false;
-            })();
+            while(signalQueue.length > 0) processSignal(signalQueue.shift());
         }
 
         function processIceQueue() {
@@ -423,7 +414,7 @@
                     await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
                     const answer = await peerConnection.createAnswer();
                     await peerConnection.setLocalDescription(answer);
-                    socket.emit('webrtc_signaling', { type: 'answer', answer: peerConnection.localDescription, targetId: sessionTargetId });
+                    socket.emit('webrtc_signaling', { type: 'answer', answer: peerConnection.localDescription });
                     processIceQueue(); 
                 } else if(data.type === 'answer') {
                     await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
@@ -452,17 +443,8 @@
         }
 
         socket.on('webrtc_signaling', async (data) => {
-            // ✨ STRICT ROOM FILTER: Ignorning signals from ghost sessions ✨
-            if(!sessionTargetId || data.targetId !== sessionTargetId) return; 
-
             if(!peerConnection) { signalQueue.push(data); return; }
-            
-            signalQueue.push(data);
-            if(!isProcessingSignal) {
-                isProcessingSignal = true;
-                while(signalQueue.length > 0) { await processSignal(signalQueue.shift()); }
-                isProcessingSignal = false;
-            }
+            processSignal(data);
         });
 
         // MEDIA & CALLING Logic
@@ -472,7 +454,7 @@
             window.appendMsg(`Ringing ${videoEnabled ? 'Video' : 'Voice'}...`, "system-msg");
             document.getElementById('video-container').classList.remove('hidden'); 
             const success = await startMedia(videoEnabled);
-            if(success) socket.emit('webrtc_signaling', { type: 'call_request', callType: videoEnabled, targetId: sessionTargetId });
+            if(success) socket.emit('webrtc_signaling', { type: 'call_request', callType: videoEnabled });
             else document.getElementById('video-container').classList.add('hidden');
         };
         window.acceptCall = async function() {
@@ -482,11 +464,11 @@
             document.getElementById('switch-cam-btn').style.display = currentCallType ? "flex" : "none";
             document.getElementById('quality-box').style.display = currentCallType ? "flex" : "none";
             const success = await startMedia(currentCallType);
-            socket.emit('webrtc_signaling', { type: 'call_accepted', targetId: sessionTargetId });
+            socket.emit('webrtc_signaling', { type: 'call_accepted' });
         };
         window.rejectCall = function() {
             document.getElementById('incoming-call-modal').classList.add('hidden');
-            socket.emit('webrtc_signaling', { type: 'call_rejected', targetId: sessionTargetId });
+            socket.emit('webrtc_signaling', { type: 'call_rejected' });
         };
         function getQualityConstraints() {
             const q = document.getElementById('video-quality').value;
@@ -547,7 +529,7 @@
             isMuted = false;
             document.getElementById('mute-btn').innerText = "🎤 Unmuted"; document.getElementById('mute-btn').style.background = "rgba(255,255,255,0.2)";
             document.getElementById('vol-slider').value = 1;
-            if(emitSignal) { socket.emit('webrtc_signaling', { type: 'call_ended', targetId: sessionTargetId }); window.appendMsg("You ended the call.", 'system-msg'); }
+            if(emitSignal) { socket.emit('webrtc_signaling', { type: 'call_ended' }); window.appendMsg("You ended the call.", 'system-msg'); }
         };
         window.toggleMute = function() {
             if(localStream && localStream.getAudioTracks().length > 0) {
@@ -714,47 +696,51 @@
         let incomingBuffer = "", incomingMeta = null, incomingTotalSize = 1;
         
         function handleIncomingData(rawData) {
-            const parsed = JSON.parse(rawData);
-            
-            if(parsed.type === 'typing') {
-                const ind = document.getElementById('typing-indicator');
-                ind.style.display = parsed.state ? 'block' : 'none';
-                if(parsed.state) {
-                    const logs = document.getElementById('chat-logs');
-                    logs.scrollTop = logs.scrollHeight; 
+            try {
+                const parsed = JSON.parse(rawData);
+                
+                if(parsed.type === 'typing') {
+                    const ind = document.getElementById('typing-indicator');
+                    ind.style.display = parsed.state ? 'block' : 'none';
+                    if(parsed.state) {
+                        const logs = document.getElementById('chat-logs');
+                        logs.scrollTop = logs.scrollHeight; 
+                    }
                 }
-            }
-            else if(parsed.type === 'text') {
-                document.getElementById('typing-indicator').style.display = 'none'; 
-                window.appendMsg(parsed.text, 'recv-msg', parsed.msgId, parsed.replyTo);
-                dataChannel.send(JSON.stringify({ type: 'seen-ack', msgId: parsed.msgId }));
-            }
-            else if (parsed.type === 'file-meta') { 
-                document.getElementById('typing-indicator').style.display = 'none';
-                incomingMeta = parsed; incomingBuffer = ""; incomingTotalSize = parsed.totalSize || 1; 
-                const logs = document.getElementById('chat-logs');
-                logs.insertAdjacentHTML('beforeend', `<div class="message system-msg progress-text" id="progress-recv-${parsed.msgId}">📥 Receiving: 0%</div>`);
-                logs.scrollTop = logs.scrollHeight;
-            }
-            else if (parsed.type === 'file-chunk') { 
-                incomingBuffer += parsed.data; 
-                const percent = Math.floor((incomingBuffer.length / incomingTotalSize) * 100);
-                const progressEl = document.getElementById(`progress-recv-${parsed.msgId}`);
-                if(progressEl) progressEl.innerText = `📥 Receiving: ${percent > 100 ? 100 : percent}%`;
-            }
-            else if (parsed.type === 'file-end') {
-                const progressEl = document.getElementById(`progress-recv-${parsed.msgId}`);
-                if(progressEl) progressEl.remove();
-                window.displayMedia(incomingBuffer, incomingMeta.fileType, 'recv-msg', parsed.msgId, incomingMeta.replyTo);
-                dataChannel.send(JSON.stringify({ type: 'seen-ack', msgId: parsed.msgId }));
-            }
-            else if (parsed.type === 'seen-ack') {
-                const statusEl = document.getElementById(`status-${parsed.msgId}`);
-                if(statusEl) { statusEl.innerText = "✓✓ Seen"; statusEl.style.color = "var(--success-green)"; }
-            }
-            else if (parsed.type === 'delete-msg') {
-                const el = document.getElementById(`msg-${parsed.msgId}`);
-                if(el) el.innerHTML = `<div style="font-style: italic; color: #94a3b8; padding: 5px;">🚫 This message was deleted</div>`;
+                else if(parsed.type === 'text') {
+                    document.getElementById('typing-indicator').style.display = 'none'; 
+                    window.appendMsg(parsed.text, 'recv-msg', parsed.msgId, parsed.replyTo);
+                    dataChannel.send(JSON.stringify({ type: 'seen-ack', msgId: parsed.msgId }));
+                }
+                else if (parsed.type === 'file-meta') { 
+                    document.getElementById('typing-indicator').style.display = 'none';
+                    incomingMeta = parsed; incomingBuffer = ""; incomingTotalSize = parsed.totalSize || 1; 
+                    const logs = document.getElementById('chat-logs');
+                    logs.insertAdjacentHTML('beforeend', `<div class="message system-msg progress-text" id="progress-recv-${parsed.msgId}">📥 Receiving: 0%</div>`);
+                    logs.scrollTop = logs.scrollHeight;
+                }
+                else if (parsed.type === 'file-chunk') { 
+                    incomingBuffer += parsed.data; 
+                    const percent = Math.floor((incomingBuffer.length / incomingTotalSize) * 100);
+                    const progressEl = document.getElementById(`progress-recv-${parsed.msgId}`);
+                    if(progressEl) progressEl.innerText = `📥 Receiving: ${percent > 100 ? 100 : percent}%`;
+                }
+                else if (parsed.type === 'file-end') {
+                    const progressEl = document.getElementById(`progress-recv-${parsed.msgId}`);
+                    if(progressEl) progressEl.remove();
+                    window.displayMedia(incomingBuffer, incomingMeta.fileType, 'recv-msg', parsed.msgId, incomingMeta.replyTo);
+                    dataChannel.send(JSON.stringify({ type: 'seen-ack', msgId: parsed.msgId }));
+                }
+                else if (parsed.type === 'seen-ack') {
+                    const statusEl = document.getElementById(`status-${parsed.msgId}`);
+                    if(statusEl) { statusEl.innerText = "✓✓ Seen"; statusEl.style.color = "var(--success-green)"; }
+                }
+                else if (parsed.type === 'delete-msg') {
+                    const el = document.getElementById(`msg-${parsed.msgId}`);
+                    if(el) el.innerHTML = `<div style="font-style: italic; color: #94a3b8; padding: 5px;">🚫 This message was deleted</div>`;
+                }
+            } catch(e) {
+                console.log("Safe packet drop");
             }
         }
 
