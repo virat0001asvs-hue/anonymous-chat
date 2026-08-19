@@ -135,7 +135,7 @@
         <h2>WebRTC Tunnel</h2>
         <div class="input-group">
             <label>Target Identifier</label>
-            <input type="text" id="phone-number" placeholder="Enter target ID">
+            <input type="text" id="phone-number" placeholder="Enter target ID (e.g., SecretRoom99)">
         </div>
         <div class="input-group">
             <label>Private Key 🔐</label>
@@ -208,7 +208,6 @@
         </div>
     </div>
 
-    <!-- CUSTOM PURGE WARNING MODAL -->
     <div id="purge-modal" class="modal hidden">
         <div class="modal-content call-box">
             <h3 style="color: var(--danger-red);">⚠️ Warning</h3>
@@ -220,7 +219,6 @@
         </div>
     </div>
 
-    <!-- OTHER MODALS -->
     <div id="incoming-call-modal" class="modal hidden">
         <div class="modal-content call-box">
             <h3 id="call-title">Incoming Call...</h3>
@@ -281,10 +279,13 @@
         let peerConnection, dataChannel, localStream;
         let currentCallType = null; 
         
+        // ✨ THE ULTIMATE BUG FIX: STRICT ROOM ISOLATION VARIABLES ✨
+        let sessionTargetId = null; 
+
         let signalQueue = []; 
         let iceQueue = []; 
         let isNegotiating = false; 
-        let isProcessingSignal = false; // ✨ NEW: Bug Fix for Network Race Condition
+        let isProcessingSignal = false; 
 
         let isMuted = false;
         let currentFacingMode = 'user'; 
@@ -308,7 +309,6 @@
             window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(e => console.log(e)); });
         }
 
-        // ✨ ELITE FIX 1: JIO/AIRTEL TURN SERVER INJECTED ✨
         const iceConfiguration = { 
             iceServers: [
                 { urls: 'stun:stun.l.google.com:19302' }, 
@@ -317,8 +317,6 @@
                 { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' }
             ] 
         };
-
-        const getTargetId = () => document.getElementById('phone-number').value.trim();
 
         window.openTutorial = function() { document.getElementById('tutorial-modal').classList.remove('hidden'); }
         window.closeTutorial = function() { document.getElementById('tutorial-modal').classList.add('hidden'); }
@@ -336,11 +334,13 @@
 
         window.sendSecurePing = function() {
             isInitiator = true;
-            const targetId = getTargetId();
-            if(!targetId) return alert("Target ID required!");
+            
+            // Lock the room ID for the initiator
+            sessionTargetId = document.getElementById('phone-number').value.trim();
+            if(!sessionTargetId) return alert("Target ID required!");
 
             activePrime = [982451653, 15485863, 32416190071][Math.floor(Math.random() * 3)];
-            socket.emit('global_secure_ping', { prime: activePrime, targetId: targetId });
+            socket.emit('global_secure_ping', { prime: activePrime, targetId: sessionTargetId });
             document.getElementById('screen-auth').classList.add('hidden');
             document.getElementById('dev-footer').classList.add('hidden');
             document.getElementById('screen-handshake').classList.remove('hidden');
@@ -348,10 +348,12 @@
         };
 
         socket.on('global_incoming_ping', (data) => {
-            const myTarget = getTargetId();
-            // ✨ ELITE FIX 2: IGNORE CROSS-TALK (Pings meant for someone else) ✨
+            const myTarget = document.getElementById('phone-number').value.trim();
             if(myTarget && myTarget !== data.targetId) return;
 
+            // ✨ STRICT FIX: Lock the room ID for the receiver immediately ✨
+            sessionTargetId = data.targetId; 
+            
             activePrime = data.prime;
             document.getElementById('screen-auth').classList.add('hidden');
             document.getElementById('dev-footer').classList.add('hidden');
@@ -363,7 +365,6 @@
             const userInputPrime = document.getElementById('prime-input').value;
             let userInputKey = document.getElementById('secret-key').value.trim();
             
-            // ✨ ELITE FIX 3: PASSWORD PROMPT IF SCREEN SWITCHED FAST ✨
             if(!userInputKey) {
                 userInputKey = prompt("🔐 Connection Locked! Enter Private Key to decrypt:");
                 if(userInputKey) document.getElementById('secret-key').value = userInputKey;
@@ -382,7 +383,7 @@
             peerConnection.ontrack = (event) => { document.getElementById('remote-video').srcObject = event.streams[0]; };
             
             peerConnection.onicecandidate = (event) => {
-                if(event.candidate) socket.emit('webrtc_signaling', { type: 'ice', candidate: event.candidate, targetId: getTargetId() });
+                if(event.candidate) socket.emit('webrtc_signaling', { type: 'ice', candidate: event.candidate, targetId: sessionTargetId });
             };
             
             peerConnection.onnegotiationneeded = async () => {
@@ -391,7 +392,7 @@
                 try {
                     const offer = await peerConnection.createOffer();
                     await peerConnection.setLocalDescription(offer);
-                    socket.emit('webrtc_signaling', { type: 'offer', offer: peerConnection.localDescription, targetId: getTargetId() });
+                    socket.emit('webrtc_signaling', { type: 'offer', offer: peerConnection.localDescription, targetId: sessionTargetId });
                 } catch (err) {} finally { isNegotiating = false; }
             };
             
@@ -402,12 +403,9 @@
                 peerConnection.ondatachannel = (event) => { dataChannel = event.channel; setupDataChannel(); };
             }
             
-            // ✨ ELITE FIX 4: SAFE SEQUENTIAL SIGNAL PROCESSING ✨
             isProcessingSignal = true;
             (async () => {
-                while(signalQueue.length > 0) {
-                    await processSignal(signalQueue.shift());
-                }
+                while(signalQueue.length > 0) { await processSignal(signalQueue.shift()); }
                 isProcessingSignal = false;
             })();
         }
@@ -425,7 +423,7 @@
                     await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
                     const answer = await peerConnection.createAnswer();
                     await peerConnection.setLocalDescription(answer);
-                    socket.emit('webrtc_signaling', { type: 'answer', answer: peerConnection.localDescription, targetId: getTargetId() });
+                    socket.emit('webrtc_signaling', { type: 'answer', answer: peerConnection.localDescription, targetId: sessionTargetId });
                     processIceQueue(); 
                 } else if(data.type === 'answer') {
                     await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
@@ -454,17 +452,15 @@
         }
 
         socket.on('webrtc_signaling', async (data) => {
-            const myTarget = getTargetId();
-            if(data.targetId && myTarget && myTarget !== data.targetId) return;
+            // ✨ STRICT ROOM FILTER: Ignorning signals from ghost sessions ✨
+            if(!sessionTargetId || data.targetId !== sessionTargetId) return; 
 
             if(!peerConnection) { signalQueue.push(data); return; }
             
             signalQueue.push(data);
             if(!isProcessingSignal) {
                 isProcessingSignal = true;
-                while(signalQueue.length > 0) {
-                    await processSignal(signalQueue.shift());
-                }
+                while(signalQueue.length > 0) { await processSignal(signalQueue.shift()); }
                 isProcessingSignal = false;
             }
         });
@@ -476,7 +472,7 @@
             window.appendMsg(`Ringing ${videoEnabled ? 'Video' : 'Voice'}...`, "system-msg");
             document.getElementById('video-container').classList.remove('hidden'); 
             const success = await startMedia(videoEnabled);
-            if(success) socket.emit('webrtc_signaling', { type: 'call_request', callType: videoEnabled, targetId: getTargetId() });
+            if(success) socket.emit('webrtc_signaling', { type: 'call_request', callType: videoEnabled, targetId: sessionTargetId });
             else document.getElementById('video-container').classList.add('hidden');
         };
         window.acceptCall = async function() {
@@ -486,11 +482,11 @@
             document.getElementById('switch-cam-btn').style.display = currentCallType ? "flex" : "none";
             document.getElementById('quality-box').style.display = currentCallType ? "flex" : "none";
             const success = await startMedia(currentCallType);
-            socket.emit('webrtc_signaling', { type: 'call_accepted', targetId: getTargetId() });
+            socket.emit('webrtc_signaling', { type: 'call_accepted', targetId: sessionTargetId });
         };
         window.rejectCall = function() {
             document.getElementById('incoming-call-modal').classList.add('hidden');
-            socket.emit('webrtc_signaling', { type: 'call_rejected', targetId: getTargetId() });
+            socket.emit('webrtc_signaling', { type: 'call_rejected', targetId: sessionTargetId });
         };
         function getQualityConstraints() {
             const q = document.getElementById('video-quality').value;
@@ -551,7 +547,7 @@
             isMuted = false;
             document.getElementById('mute-btn').innerText = "🎤 Unmuted"; document.getElementById('mute-btn').style.background = "rgba(255,255,255,0.2)";
             document.getElementById('vol-slider').value = 1;
-            if(emitSignal) { socket.emit('webrtc_signaling', { type: 'call_ended', targetId: getTargetId() }); window.appendMsg("You ended the call.", 'system-msg'); }
+            if(emitSignal) { socket.emit('webrtc_signaling', { type: 'call_ended', targetId: sessionTargetId }); window.appendMsg("You ended the call.", 'system-msg'); }
         };
         window.toggleMute = function() {
             if(localStream && localStream.getAudioTracks().length > 0) {
