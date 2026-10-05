@@ -130,7 +130,7 @@
     </script>
     <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 
-    <!-- SCREEN 1 & 2 -->
+    <!-- SCREEN 1: AUTH -->
     <div id="screen-auth" class="window-panel">
         <h2>WebRTC Tunnel</h2>
         <div class="input-group">
@@ -145,6 +145,7 @@
         <button onclick="window.openTutorial()" class="secondary-btn">📖 How to Use?</button>
     </div>
 
+    <!-- SCREEN 2: HANDSHAKE -->
     <div id="screen-handshake" class="window-panel hidden">
         <h2>Handshake Protocol</h2>
         <div class="prime-box">
@@ -228,10 +229,12 @@
             </div>
         </div>
     </div>
+    
     <div id="image-modal" class="modal hidden" onclick="window.closeModal()">
         <span class="close-modal">&times;</span>
         <img class="modal-content" id="modal-img">
     </div>
+
     <div id="tutorial-modal" class="modal hidden">
         <div class="modal-content call-box tutorial-content">
             <h3>📖 How to Use?</h3>
@@ -240,6 +243,7 @@
             <button onclick="window.closeTutorial()" class="primary-btn">Understood, Let's Go!</button>
         </div>
     </div>
+
     <div id="feedback-modal" class="modal hidden">
         <div class="modal-content call-box tutorial-content">
             <h3>💬 Give Feedback</h3>
@@ -251,21 +255,23 @@
             </div>
         </div>
     </div>
+
     <div id="pwa-install-modal" class="modal hidden">
         <div class="modal-content call-box">
             <h3>📱 Add to Home Screen?</h3>
-            <p>Bhai, kya aap is app ko bina browser khole directly home screen se makkhan ki tarah chalana chahte hain?</p>
+            <p>Directly home screen se makkhan ki tarah chalane ke liye install karein!</p>
             <div class="call-actions">
                 <button onclick="window.triggerPWAInstall()" class="btn-accept">📥 Download</button>
                 <button onclick="window.closePWAModal()" class="btn-reject">Later</button>
             </div>
         </div>
     </div>
+
     <div class="dev-footer" id="dev-footer">
         Developed by it.txt 😉 | <a href="#" onclick="window.openFeedback(); return false;">Give Feedback</a>
     </div>
 
-    <!-- 🧠 ALL JAVASCRIPT LOGIC HERE -->
+    <!-- 🧠 BULLETPROOF JAVASCRIPT ENGINE -->
     <script>
         window.addEventListener('load', () => {
             const ua = navigator.userAgent || navigator.vendor || window.opera;
@@ -276,13 +282,13 @@
 
         const socket = io(window.location.origin); 
         let activePrime = null, isInitiator = false;
-        let peerConnection, dataChannel, localStream;
+        let peerConnection = null, dataChannel = null, localStream = null;
         let currentCallType = null; 
         
-        // ✨ THE GPT-6/MYTHOS LEVEL BUG FIX VARIABLES ✨
-        let sessionRoomId = null; // Strict isolation
-        let isRemoteSet = false;  // To track if remote description is ready
-        let pendingCandidates = []; // Queue for ICE candidates that arrive too early
+        let sessionRoomId = null;
+        let isPeerReady = false;          // True when other peer reaches chat screen
+        let pendingOffer = null;          // Safely buffer offer if peerConnection is not yet initialized
+        let pendingCandidates = [];       // Queue for early ICE candidates
 
         let isMuted = false;
         let currentFacingMode = 'user'; 
@@ -296,7 +302,7 @@
         window.triggerPWAInstall = async function() {
             if (deferredPrompt) {
                 deferredPrompt.prompt(); 
-                const { outcome } = await deferredPrompt.userChoice;
+                await deferredPrompt.userChoice;
                 deferredPrompt = null;
             }
             window.closePWAModal();
@@ -306,12 +312,12 @@
             window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(e => console.log(e)); });
         }
 
-        // Fast & Reliable Global STUN Servers
+        // Fast & Reliable STUN
         const iceConfiguration = { 
             iceServers: [
                 { urls: 'stun:stun.l.google.com:19302' }, 
-                { urls: 'stun:stun.cloudflare.com:3478' },
-                { urls: 'stun:global.stun.twilio.com:3478' }
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun.cloudflare.com:3478' }
             ] 
         };
 
@@ -323,8 +329,7 @@
         window.sendFeedback = function() {
             const text = document.getElementById('feedback-text').value;
             if(!text.trim()) return alert("Please write something first!");
-            const mailtoLink = `mailto:lappykumar98@gmail.com?subject=Feedback for WebRTC Elite Tunnel&body=${encodeURIComponent(text)}`;
-            window.location.href = mailtoLink;
+            window.location.href = `mailto:lappykumar98@gmail.com?subject=Feedback for WebRTC Elite Tunnel&body=${encodeURIComponent(text)}`;
             window.closeFeedback();
             document.getElementById('feedback-text').value = '';
         }
@@ -346,9 +351,10 @@
 
         socket.on('global_incoming_ping', (data) => {
             const myTarget = document.getElementById('phone-number').value.trim();
-            if(myTarget && myTarget !== data.targetId) return; // Prevent Cross-Talk
+            if(myTarget && myTarget !== data.targetId) return;
 
-            sessionRoomId = data.targetId; // Lock room ID for receiver
+            isInitiator = false;
+            sessionRoomId = data.targetId;
             activePrime = data.prime;
             
             document.getElementById('screen-auth').classList.add('hidden');
@@ -372,17 +378,19 @@
             document.getElementById('screen-chat').classList.remove('hidden');
             window.scrollTo(0, 0);
             
-            initWebRTC(); 
+            await initWebRTC(); 
+            // Announce that this client is now ready on the chat screen!
+            socket.emit('webrtc_signaling', { type: 'peer_ready', roomId: sessionRoomId });
         };
 
-        // 🔥 THE BULLETPROOF GPT-6 LEVEL ENGINE 🔥
-        function initWebRTC() {
+        async function initWebRTC() {
             peerConnection = new RTCPeerConnection(iceConfiguration);
-            isRemoteSet = false;
-            pendingCandidates = [];
 
             peerConnection.ontrack = (event) => { 
-                document.getElementById('remote-video').srcObject = event.streams[0]; 
+                const remoteVid = document.getElementById('remote-video');
+                if (remoteVid.srcObject !== event.streams[0]) {
+                    remoteVid.srcObject = event.streams[0]; 
+                }
             };
             
             peerConnection.onicecandidate = (event) => {
@@ -390,83 +398,140 @@
                     socket.emit('webrtc_signaling', { type: 'ice', candidate: event.candidate, roomId: sessionRoomId });
                 }
             };
-            
-            peerConnection.onnegotiationneeded = async () => {
-                try {
-                    const offer = await peerConnection.createOffer();
-                    await peerConnection.setLocalDescription(offer);
-                    socket.emit('webrtc_signaling', { type: 'offer', offer: peerConnection.localDescription, roomId: sessionRoomId });
-                } catch (err) {
-                    console.error("Error creating offer:", err);
+
+            peerConnection.onconnectionstatechange = () => {
+                const status = document.getElementById('status-msg');
+                if (peerConnection.connectionState === 'connected') {
+                    status.innerText = "✅ Military-Grade E2EE Tunnel Active!";
+                    status.style.color = "var(--success-green)";
+                    status.style.border = "none";
+                } else if (peerConnection.connectionState === 'failed' || peerConnection.connectionState === 'disconnected') {
+                    status.innerText = "⚠️ Tunnel Disconnected. Reconnecting...";
+                    status.style.color = "var(--danger-red)";
                 }
             };
             
             if(isInitiator) {
                 dataChannel = peerConnection.createDataChannel('cryptoTunnel');
                 setupDataChannel();
+                // If peer is already on chat screen, start negotiation immediately!
+                if(isPeerReady) {
+                    await makeOffer();
+                }
             } else {
                 peerConnection.ondatachannel = (event) => { 
                     dataChannel = event.channel; 
                     setupDataChannel(); 
                 };
+                // If an offer arrived before handshake verification finished, handle it now!
+                if (pendingOffer) {
+                    await handleOffer(pendingOffer);
+                    pendingOffer = null;
+                }
             }
         }
 
-        // 🔥 PERFECT ASYNCHRONOUS SIGNALING & ICE QUEUING 🔥
+        async function makeOffer() {
+            try {
+                if (!peerConnection) return;
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+                socket.emit('webrtc_signaling', { type: 'offer', offer: peerConnection.localDescription, roomId: sessionRoomId });
+            } catch (err) {
+                console.error("Error creating offer:", err);
+            }
+        }
+
+        async function handleOffer(offerData) {
+            try {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(offerData));
+                processPendingCandidates();
+                const answer = await peerConnection.createAnswer();
+                await peerConnection.setLocalDescription(answer);
+                socket.emit('webrtc_signaling', { type: 'answer', answer: peerConnection.localDescription, roomId: sessionRoomId });
+            } catch (err) {
+                console.error("Error handling offer:", err);
+            }
+        }
+
+        // 🔥 PERFECT ASYNCHRONOUS SIGNALING & BUFFERING 🔥
         socket.on('webrtc_signaling', async (data) => {
-            if (!sessionRoomId || data.roomId !== sessionRoomId) return; // Strict Isolation
-            if (!peerConnection) return;
+            if (!sessionRoomId || data.roomId !== sessionRoomId) return;
 
             try {
-                if (data.type === 'offer') {
-                    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
-                    isRemoteSet = true;
-                    processPendingCandidates();
+                if (data.type === 'peer_ready') {
+                    isPeerReady = true;
+                    // When initiator knows receiver is ready, kickstart the connection!
+                    if (isInitiator && peerConnection) {
+                        await makeOffer();
+                    }
+                    return;
+                }
 
-                    const answer = await peerConnection.createAnswer();
-                    await peerConnection.setLocalDescription(answer);
-                    socket.emit('webrtc_signaling', { type: 'answer', answer: peerConnection.localDescription, roomId: sessionRoomId });
+                if (data.type === 'offer') {
+                    if (!peerConnection) {
+                        // Receiver hasn't completed verifyPrimeConnect yet; buffer it!
+                        pendingOffer = data.offer;
+                    } else {
+                        await handleOffer(data.offer);
+                    }
+                    return;
+                } 
                 
-                } else if (data.type === 'answer') {
-                    await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
-                    isRemoteSet = true;
-                    processPendingCandidates();
+                if (data.type === 'answer') {
+                    if (peerConnection) {
+                        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+                        processPendingCandidates();
+                    }
+                    return;
+                } 
                 
-                } else if (data.type === 'ice') {
-                    if (isRemoteSet) {
+                if (data.type === 'ice') {
+                    if (peerConnection && peerConnection.remoteDescription) {
                         await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
                     } else {
-                        // The magic queue that prevents ICE failure
                         pendingCandidates.push(data.candidate); 
                     }
-                
-                } else if (data.type === 'call_request') {
+                    return;
+                }
+
+                if (data.type === 'call_request') {
                     currentCallType = data.callType;
                     document.getElementById('call-title').innerText = `Incoming ${data.callType ? 'Video' : 'Voice'} Call...`;
                     document.getElementById('incoming-call-modal').classList.remove('hidden');
+                    return;
+                } 
                 
-                } else if (data.type === 'call_accepted') {
+                if (data.type === 'call_accepted') {
                     window.appendMsg("Call Connected.", "system-msg");
                     document.getElementById('video-container').classList.remove('hidden');
                     document.getElementById('advanced-controls').classList.remove('hidden');
                     document.getElementById('switch-cam-btn').style.display = currentCallType ? "flex" : "none";
                     document.getElementById('quality-box').style.display = currentCallType ? "flex" : "none";
                     if(!localStream) await startMedia(currentCallType);
+                    // Renegotiate streams seamlessly
+                    await makeOffer();
+                    return;
+                } 
                 
-                } else if (data.type === 'call_rejected') {
+                if (data.type === 'call_rejected') {
                     window.appendMsg("Call Declined.", "system-msg");
+                    window.endCall(false);
+                    return;
+                } 
                 
-                } else if (data.type === 'call_ended') {
+                if (data.type === 'call_ended') {
                     window.endCall(false); 
                     window.appendMsg("Call Ended by peer.", "system-msg");
+                    return;
                 }
             } catch (err) {
                 console.error("Signaling Error:", err);
             }
         });
 
-        // Add any queued candidates once remote description is successfully set
         function processPendingCandidates() {
+            if (!peerConnection || !peerConnection.remoteDescription) return;
             while (pendingCandidates.length > 0) {
                 const candidate = pendingCandidates.shift();
                 peerConnection.addIceCandidate(new RTCIceCandidate(candidate)).catch(e => console.error(e));
@@ -474,7 +539,7 @@
         }
 
         // ==========================================
-        // 🎨 ALL PREMIUM UI FEATURES REMAIN INTACT
+        // 📞 AUDIO & VIDEO CALL MANAGEMENT
         // ==========================================
 
         window.requestCall = async function(videoEnabled) {
@@ -486,6 +551,7 @@
             if(success) socket.emit('webrtc_signaling', { type: 'call_request', callType: videoEnabled, roomId: sessionRoomId });
             else document.getElementById('video-container').classList.add('hidden');
         };
+
         window.acceptCall = async function() {
             document.getElementById('incoming-call-modal').classList.add('hidden');
             document.getElementById('video-container').classList.remove('hidden');
@@ -493,29 +559,39 @@
             document.getElementById('switch-cam-btn').style.display = currentCallType ? "flex" : "none";
             document.getElementById('quality-box').style.display = currentCallType ? "flex" : "none";
             const success = await startMedia(currentCallType);
-            socket.emit('webrtc_signaling', { type: 'call_accepted', roomId: sessionRoomId });
+            if(success) {
+                socket.emit('webrtc_signaling', { type: 'call_accepted', roomId: sessionRoomId });
+            }
         };
+
         window.rejectCall = function() {
             document.getElementById('incoming-call-modal').classList.add('hidden');
             socket.emit('webrtc_signaling', { type: 'call_rejected', roomId: sessionRoomId });
         };
+
         function getQualityConstraints() {
             const q = document.getElementById('video-quality').value;
             if (q === 'high') return { width: { ideal: 1920 }, frameRate: { ideal: 60, max: 60 }, bitrate: 4000000 };
             if (q === 'low') return { width: { ideal: 640 }, frameRate: { ideal: 24, max: 24 }, bitrate: 500000 };
             return { width: { ideal: 1280 }, frameRate: { ideal: 30, max: 30 }, bitrate: 1500000 };
         }
+
         function applyMirrorLogic() {
             const localVid = document.getElementById('local-video');
             if(currentFacingMode === 'user') localVid.classList.add('mirror-feed'); else localVid.classList.remove('mirror-feed');
         }
+
         async function startMedia(videoEnabled) {
             try {
                 const q = getQualityConstraints();
-                const constraints = { audio: true, video: videoEnabled ? { facingMode: currentFacingMode, width: q.width, frameRate: q.frameRate } : false };
+                const constraints = { 
+                    audio: true, 
+                    video: videoEnabled ? { facingMode: currentFacingMode, width: q.width, frameRate: q.frameRate } : false 
+                };
                 localStream = await navigator.mediaDevices.getUserMedia(constraints);
                 document.getElementById('local-video').srcObject = localStream;
                 applyMirrorLogic(); 
+
                 localStream.getTracks().forEach(track => {
                     const sender = peerConnection.addTrack(track, localStream);
                     if (track.kind === 'video') {
@@ -526,52 +602,84 @@
                     }
                 });
                 return true;
-            } catch (err) { alert("Camera/Mic Permission Denied!"); return false; }
+            } catch (err) { 
+                alert("Camera/Mic Permission Denied!"); 
+                return false; 
+            }
         }
+
         window.changeQuality = async function() {
             if (!currentCallType || !localStream || localStream.getVideoTracks().length === 0) return;
             const q = getQualityConstraints();
             try {
                 const newStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: currentFacingMode, width: q.width, frameRate: q.frameRate }});
                 const newVideoTrack = newStream.getVideoTracks()[0];
-                const sender = peerConnection.getSenders().find(s => s.track.kind === 'video');
+                const sender = peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
                 if (sender) {
-                    sender.replaceTrack(newVideoTrack);
+                    await sender.replaceTrack(newVideoTrack);
                     const parameters = sender.getParameters();
                     if (!parameters.encodings) parameters.encodings = [{}];
-                    parameters.encodings[0].maxBitrate = q.bitrate; sender.setParameters(parameters).catch(e => console.error(e));
+                    parameters.encodings[0].maxBitrate = q.bitrate; 
+                    sender.setParameters(parameters).catch(e => console.error(e));
                 }
                 const oldTrack = localStream.getVideoTracks()[0];
-                localStream.removeTrack(oldTrack); oldTrack.stop(); 
-                localStream.addTrack(newVideoTrack); document.getElementById('local-video').srcObject = localStream; applyMirrorLogic(); 
-            } catch (err) {}
+                localStream.removeTrack(oldTrack); 
+                oldTrack.stop(); 
+                localStream.addTrack(newVideoTrack); 
+                document.getElementById('local-video').srcObject = localStream; 
+                applyMirrorLogic(); 
+            } catch (err) {
+                console.error(err);
+            }
         };
+
         window.switchCamera = function() { 
             if(!localStream || localStream.getVideoTracks().length === 0) return alert("No camera to switch!");
             currentFacingMode = (currentFacingMode === 'user') ? 'environment' : 'user';
             window.changeQuality(); 
         };
+
         window.endCall = function(emitSignal = true) {
-            if(localStream) { localStream.getTracks().forEach(track => track.stop()); localStream = null; }
+            if(localStream) { 
+                localStream.getTracks().forEach(track => track.stop()); 
+                localStream = null; 
+            }
+            // 🔥 Clean senders to prevent dead track corruptions on next call
+            if(peerConnection) {
+                peerConnection.getSenders().forEach(sender => {
+                    if (sender.track) {
+                        try { peerConnection.removeTrack(sender); } catch(e) {}
+                    }
+                });
+            }
+            document.getElementById('remote-video').srcObject = null;
+            document.getElementById('local-video').srcObject = null;
             document.getElementById('video-container').classList.add('hidden');
             document.getElementById('advanced-controls').classList.add('hidden'); 
             isMuted = false;
-            document.getElementById('mute-btn').innerText = "🎤 Unmuted"; document.getElementById('mute-btn').style.background = "rgba(255,255,255,0.2)";
+            document.getElementById('mute-btn').innerText = "🎤 Unmuted"; 
+            document.getElementById('mute-btn').style.background = "rgba(255,255,255,0.2)";
             document.getElementById('vol-slider').value = 1;
-            if(emitSignal) { socket.emit('webrtc_signaling', { type: 'call_ended', roomId: sessionRoomId }); window.appendMsg("You ended the call.", 'system-msg'); }
+            if(emitSignal) { 
+                socket.emit('webrtc_signaling', { type: 'call_ended', roomId: sessionRoomId }); 
+                window.appendMsg("You ended the call.", 'system-msg'); 
+            }
         };
+
         window.toggleMute = function() {
             if(localStream && localStream.getAudioTracks().length > 0) {
-                isMuted = !isMuted; localStream.getAudioTracks()[0].enabled = !isMuted; 
+                isMuted = !isMuted; 
+                localStream.getAudioTracks()[0].enabled = !isMuted; 
                 const btn = document.getElementById('mute-btn');
                 btn.innerText = isMuted ? "🔇 Muted" : "🎤 Unmuted";
                 btn.style.background = isMuted ? "var(--danger-red)" : "rgba(255,255,255,0.2)";
                 btn.style.borderColor = isMuted ? "var(--danger-red)" : "rgba(255,255,255,0.1)";
             }
         };
+
         window.changeVolume = function(val) { document.getElementById('remote-video').volume = val; };
 
-        // DRAG LOGIC
+        // DRAGGABLE PIP
         const localVidWrapper = document.getElementById('local-video-wrapper');
         let isDragging = false, startX, startY, currentX = 0, currentY = 0;
         function dragStart(e) {
@@ -590,9 +698,11 @@
         window.addEventListener('mouseup', dragEnd); window.addEventListener('touchend', dragEnd);
         window.addEventListener('mousemove', drag); window.addEventListener('touchmove', drag, {passive: false});
 
-        let isTyping = false;
-        let typingTimer;
-        let currentReplyContext = null; 
+        // ==========================================
+        // 💬 DATA CHANNEL & REAL-TIME CHAT
+        // ==========================================
+
+        let isTyping = false, typingTimer, currentReplyContext = null; 
 
         const msgInput = document.getElementById('msg-input');
         msgInput.addEventListener('input', () => {
@@ -659,7 +769,8 @@
             dataChannel.onopen = () => {
                 const status = document.getElementById('status-msg');
                 status.innerText = "✅ Military-Grade E2EE Tunnel Active!";
-                status.style.color = "var(--success-green)"; status.style.border = "none";
+                status.style.color = "var(--success-green)"; 
+                status.style.border = "none";
             };
             dataChannel.onclose = () => window.appendMsg("⚠️ Peer Disconnected.", "system-msg");
             dataChannel.onmessage = (event) => handleIncomingData(event.data);
@@ -692,7 +803,8 @@
                     logs.insertAdjacentHTML('beforeend', `<div class="message system-msg progress-text" id="progress-send-${msgId}">📤 Sending: 0%</div>`);
                     logs.scrollTop = logs.scrollHeight;
 
-                    const chunkSize = 16384; let offset = 0;
+                    const chunkSize = 16384; 
+                    let offset = 0;
                     function sendNextChunk() {
                         const end = Math.min(offset + chunkSize, totalLength);
                         dataChannel.send(JSON.stringify({ type: 'file-chunk', data: base64Data.slice(offset, end), msgId: msgId }));
