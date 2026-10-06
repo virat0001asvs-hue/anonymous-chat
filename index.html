@@ -5,12 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>WebRTC Elite Tunnel</title>
     
-    <!-- 📱 LINK TO PWA MANIFEST -->
     <link rel="manifest" href="/manifest.json">
-    
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
-    <!-- 🎨 ADVANCED CSS STYLING -->
     <style>
         :root { 
             --bg-gradient: linear-gradient(135deg, #050811 0%, #0b1329 100%); 
@@ -22,20 +19,72 @@
             --warning-orange: #f97316;
         }
 
-        body { background: var(--bg-gradient); color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100dvh; margin: 0; overflow: hidden; touch-action: manipulation; top: 0px !important; }
+        body { 
+            background: var(--bg-gradient); 
+            color: #f8fafc; 
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100dvh; 
+            margin: 0; 
+            overflow: hidden; 
+            touch-action: manipulation; 
+        }
+
         .goog-te-banner-frame.skiptranslate { display: none !important; }
 
-        #inapp-warning { position: fixed; top: 0; left: 0; width: 100%; background: var(--warning-orange); color: white; text-align: center; padding: 15px; z-index: 9999; box-sizing: border-box; font-weight: bold; box-shadow: 0 5px 20px rgba(0,0,0,0.5); border-bottom: 2px solid rgba(255,255,255,0.2); }
+        #inapp-warning { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            background: var(--warning-orange); 
+            color: white; 
+            text-align: center; 
+            padding: 15px; 
+            z-index: 9999; 
+            box-sizing: border-box; 
+            font-weight: bold; 
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5); 
+        }
         .warning-text { font-size: 0.9rem; font-weight: normal; display: block; margin-top: 5px; }
         .btn-dismiss-warning { margin-top: 10px; background: rgba(0,0,0,0.3); color: white; border: 1px solid rgba(255,255,255,0.5); padding: 5px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; }
 
-        .window-panel { background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 20px; padding: 1.2rem; width: 92%; max-width: 450px; max-height: 98dvh; box-shadow: 0 20px 40px rgba(0,0,0,0.5); display: flex; flex-direction: column; box-sizing: border-box; position: relative; z-index: 10; }
+        .window-panel { 
+            background: var(--glass-bg); 
+            backdrop-filter: blur(20px); 
+            -webkit-backdrop-filter: blur(20px); 
+            border: 1px solid var(--glass-border); 
+            border-radius: 20px; 
+            padding: 1.2rem; 
+            width: 92%; 
+            max-width: 450px; 
+            max-height: 98dvh; 
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5); 
+            display: flex; 
+            flex-direction: column; 
+            box-sizing: border-box; 
+            position: relative; 
+            z-index: 10; 
+        }
         .hidden { display: none !important; }
 
         h2 { margin-top: 0; font-size: 1.2rem; text-align: center; color: #fff; margin-bottom: 1rem; flex-shrink: 0; }
         .input-group { margin-bottom: 1rem; }
         label { display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.4rem; font-weight: 600; text-transform: uppercase; }
-        input:not([type="file"]), textarea { width: 100%; padding: 14px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.4); color: #fff; box-sizing: border-box; outline: none; font-size: 1rem; font-family: inherit; }
+        input:not([type="file"]), textarea { 
+            width: 100%; 
+            padding: 14px; 
+            border-radius: 12px; 
+            border: 1px solid var(--glass-border); 
+            background: rgba(0,0,0,0.4); 
+            color: #fff; 
+            box-sizing: border-box; 
+            outline: none; 
+            font-size: 1rem; 
+            font-family: inherit; 
+        }
         input:focus, textarea:focus { border-color: var(--neon-cyan); }
 
         .primary-btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 1rem; transition: 0.2s; color: white; margin-top: 5px; background: var(--neon-cyan); }
@@ -66,7 +115,6 @@
         @keyframes premiumGold { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
 
         .recv-msg { background: rgba(255,255,255,0.1); color: #fff; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid var(--glass-border); }
-        
         .media-content { max-width: 100%; max-height: 250px; object-fit: cover; border-radius: 8px; margin-top: 5px; cursor: zoom-in; border: 1px solid rgba(255,255,255,0.2); }
 
         .msg-meta { font-size: 0.7rem; color: rgba(255,255,255,0.7); margin-top: 6px; display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
@@ -86,7 +134,7 @@
         .mirror-feed { transform: scaleX(-1); }
 
         .call-controls { position: absolute; bottom: 30px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 15px; z-index: 2002; padding: 0 20px; box-sizing: border-box; }
-        .advanced-controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; width: 100%; transition: opacity 0.3s ease; }
+        .advanced-controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; width: 100%; }
         .tool-btn { background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 12px 18px; border-radius: 16px; font-weight: bold; cursor: pointer; backdrop-filter: blur(10px); display: flex; align-items: center; gap: 5px; }
         .quality-selector { display: flex; align-items: center; gap: 5px; background: rgba(255,255,255,0.2); padding: 5px 12px; border-radius: 16px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
         .quality-selector select { background: transparent; color: white; border: none; outline: none; font-weight: bold; cursor: pointer; font-size: 0.9rem; }
@@ -105,12 +153,11 @@
 
         #image-modal img { max-width: 95vw; max-height: 90dvh; border-radius: 12px; object-fit: contain; }
         .close-modal { position: absolute; top: 15px; right: 15px; color: white; font-size: 40px; cursor: pointer; z-index: 3001; line-height: 1; }
-        .dev-footer { position: fixed; bottom: 15px; width: 100%; text-align: center; color: #64748b; font-size: 0.8rem; z-index: 5; font-weight: 500; letter-spacing: 0.5px; }
-        .dev-footer a { color: var(--neon-cyan); text-decoration: none; font-weight: bold; margin-left: 5px; transition: 0.2s; }
+        .dev-footer { position: fixed; bottom: 15px; width: 100%; text-align: center; color: #64748b; font-size: 0.8rem; z-index: 5; font-weight: 500; }
+        .dev-footer a { color: var(--neon-cyan); text-decoration: none; font-weight: bold; margin-left: 5px; }
         .tutorial-content { text-align: left; padding: 1.5rem; max-height: 75vh; overflow-y: auto; }
         .tutorial-content h3 { color: var(--neon-cyan); margin-top: 0; text-align: center; }
         .tutorial-content p { color: #cbd5e1; font-size: 0.95rem; line-height: 1.5; margin-bottom: 10px; }
-        .tutorial-content ol { color: #f8fafc; padding-left: 20px; margin-bottom: 20px; }
         #google_translate_element { margin-bottom: 15px; text-align: center; width: 100%; }
         .goog-te-gadget { color: transparent !important; font-size: 0 !important; } 
         .goog-te-gadget .goog-logo-link { display: none !important; }
@@ -186,7 +233,7 @@
         <button class="btn-kill" onclick="window.triggerKillSwitch()">Purge Connection</button>
     </div>
 
-    <!-- FULLSCREEN VIDEO & MODALS -->
+    <!-- FULLSCREEN VIDEO -->
     <div id="video-container" class="hidden">
         <video id="remote-video" autoplay playsinline></video>
         <div id="local-video-wrapper">
@@ -209,6 +256,7 @@
         </div>
     </div>
 
+    <!-- MODALS -->
     <div id="purge-modal" class="modal hidden">
         <div class="modal-content call-box">
             <h3 style="color: var(--danger-red);">⚠️ Warning</h3>
@@ -259,7 +307,7 @@
     <div id="pwa-install-modal" class="modal hidden">
         <div class="modal-content call-box">
             <h3>📱 Add to Home Screen?</h3>
-            <p>Directly home screen se makkhan ki tarah chalane ke liye install karein!</p>
+            <p>Direct home screen se bina browser khol kar chalane ke liye install karein!</p>
             <div class="call-actions">
                 <button onclick="window.triggerPWAInstall()" class="btn-accept">📥 Download</button>
                 <button onclick="window.closePWAModal()" class="btn-reject">Later</button>
@@ -271,8 +319,8 @@
         Developed by it.txt 😉 | <a href="#" onclick="window.openFeedback(); return false;">Give Feedback</a>
     </div>
 
-    <!-- 🧠 BULLETPROOF JAVASCRIPT ENGINE -->
     <script>
+        // In-app browser detection
         window.addEventListener('load', () => {
             const ua = navigator.userAgent || navigator.vendor || window.opera;
             if (ua.indexOf('FBAN') > -1 || ua.indexOf('FBAV') > -1 || ua.indexOf('Instagram') > -1) {
@@ -286,13 +334,14 @@
         let currentCallType = null; 
         
         let sessionRoomId = null;
-        let isPeerReady = false;          // True when other peer reaches chat screen
-        let pendingOffer = null;          // Safely buffer offer if peerConnection is not yet initialized
-        let pendingCandidates = [];       // Queue for early ICE candidates
+        let pendingOffer = null;
+        let pendingCandidates = [];
+        let peerHashProof = null;
 
         let isMuted = false;
         let currentFacingMode = 'user'; 
 
+        // PWA Prompt
         let deferredPrompt;
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault(); 
@@ -312,19 +361,37 @@
             window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(e => console.log(e)); });
         }
 
-        // Fast & Reliable STUN
+        // 🌐 STUN + Free OpenRelay TURN for 4G/5G Carrier Penetration
         const iceConfiguration = { 
             iceServers: [
                 { urls: 'stun:stun.l.google.com:19302' }, 
                 { urls: 'stun:stun1.l.google.com:19302' },
-                { urls: 'stun:stun.cloudflare.com:3478' }
+                { urls: 'stun:stun.cloudflare.com:3478' },
+                {
+                    urls: "turn:openrelay.metered.ca:80",
+                    username: "openrelayproject",
+                    credential: "openrelayproject"
+                },
+                {
+                    urls: "turn:openrelay.metered.ca:443",
+                    username: "openrelayproject",
+                    credential: "openrelayproject"
+                }
             ] 
         };
 
-        window.openTutorial = function() { document.getElementById('tutorial-modal').classList.remove('hidden'); }
-        window.closeTutorial = function() { document.getElementById('tutorial-modal').classList.add('hidden'); }
-        window.openFeedback = function() { document.getElementById('feedback-modal').classList.remove('hidden'); }
-        window.closeFeedback = function() { document.getElementById('feedback-modal').classList.add('hidden'); }
+        // Cryptographic Hash for Zero-Knowledge Private Key Verification
+        async function computeAuthHash(key, prime) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(key + ":" + prime);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        window.openTutorial = function() { document.getElementById('tutorial-modal').classList.remove('hidden'); };
+        window.closeTutorial = function() { document.getElementById('tutorial-modal').classList.add('hidden'); };
+        window.openFeedback = function() { document.getElementById('feedback-modal').classList.remove('hidden'); };
+        window.closeFeedback = function() { document.getElementById('feedback-modal').classList.add('hidden'); };
         
         window.sendFeedback = function() {
             const text = document.getElementById('feedback-text').value;
@@ -332,16 +399,19 @@
             window.location.href = `mailto:lappykumar98@gmail.com?subject=Feedback for WebRTC Elite Tunnel&body=${encodeURIComponent(text)}`;
             window.closeFeedback();
             document.getElementById('feedback-text').value = '';
-        }
+        };
 
-        window.sendSecurePing = function() {
-            isInitiator = true;
+        window.sendSecurePing = async function() {
             sessionRoomId = document.getElementById('phone-number').value.trim();
+            const secretKey = document.getElementById('secret-key').value.trim();
             if(!sessionRoomId) return alert("Target ID required!");
+            if(!secretKey) return alert("Private Key required!");
 
+            isInitiator = true;
             activePrime = [982451653, 15485863, 32416190071][Math.floor(Math.random() * 3)];
-            
-            socket.emit('global_secure_ping', { prime: activePrime, targetId: sessionRoomId });
+            const keyHash = await computeAuthHash(secretKey, activePrime);
+
+            socket.emit('global_secure_ping', { prime: activePrime, targetId: sessionRoomId, keyProof: keyHash });
             
             document.getElementById('screen-auth').classList.add('hidden');
             document.getElementById('dev-footer').classList.add('hidden');
@@ -351,11 +421,13 @@
 
         socket.on('global_incoming_ping', (data) => {
             const myTarget = document.getElementById('phone-number').value.trim();
-            if(myTarget && myTarget !== data.targetId) return;
+            // 🛡️ Prevent screen hijacking: Only activate if Target ID explicitly matches
+            if (!myTarget || myTarget !== data.targetId) return;
 
             isInitiator = false;
             sessionRoomId = data.targetId;
             activePrime = data.prime;
+            peerHashProof = data.keyProof;
             
             document.getElementById('screen-auth').classList.add('hidden');
             document.getElementById('dev-footer').classList.add('hidden');
@@ -372,24 +444,49 @@
                 if(userInputKey) document.getElementById('secret-key').value = userInputKey;
             }
 
-            if(!userInputKey || parseInt(userInputPrime) !== activePrime) return alert("Handshake Failed! Check Prime or Key.");
+            if(!userInputKey || parseInt(userInputPrime) !== activePrime) {
+                return alert("Handshake Failed! Check Prime or Key.");
+            }
+
+            // Cryptographic Key verification
+            if (!isInitiator && peerHashProof) {
+                const myHash = await computeAuthHash(userInputKey, activePrime);
+                if (myHash !== peerHashProof) {
+                    alert("🚨 Security Alert: Private Key does NOT match Peer's Key! Tunnel aborted.");
+                    return location.reload();
+                }
+            }
             
             document.getElementById('screen-handshake').classList.add('hidden');
             document.getElementById('screen-chat').classList.remove('hidden');
             window.scrollTo(0, 0);
             
-            await initWebRTC(); 
-            // Announce that this client is now ready on the chat screen!
-            socket.emit('webrtc_signaling', { type: 'peer_ready', roomId: sessionRoomId });
+            // Join Room on Server
+            socket.emit('join_tunnel', sessionRoomId);
         };
 
+        socket.on('tunnel_error', (msg) => {
+            alert(msg);
+            location.reload();
+        });
+
+        // Triggered only when both peers are confirmed inside the socket room
+        socket.on('peers_synchronized', async () => {
+            await initWebRTC();
+            if (isInitiator) {
+                await makeOffer();
+            }
+        });
+
         async function initWebRTC() {
+            if (peerConnection) return;
             peerConnection = new RTCPeerConnection(iceConfiguration);
 
             peerConnection.ontrack = (event) => { 
                 const remoteVid = document.getElementById('remote-video');
                 if (remoteVid.srcObject !== event.streams[0]) {
-                    remoteVid.srcObject = event.streams[0]; 
+                    remoteVid.srcObject = event.streams[0];
+                    remoteVid.play().catch(e => console.log('Autoplay handled'));
                 }
             };
             
@@ -406,7 +503,7 @@
                     status.style.color = "var(--success-green)";
                     status.style.border = "none";
                 } else if (peerConnection.connectionState === 'failed' || peerConnection.connectionState === 'disconnected') {
-                    status.innerText = "⚠️ Tunnel Disconnected. Reconnecting...";
+                    status.innerText = "⚠️ Tunnel Disconnected.";
                     status.style.color = "var(--danger-red)";
                 }
             };
@@ -414,16 +511,11 @@
             if(isInitiator) {
                 dataChannel = peerConnection.createDataChannel('cryptoTunnel');
                 setupDataChannel();
-                // If peer is already on chat screen, start negotiation immediately!
-                if(isPeerReady) {
-                    await makeOffer();
-                }
             } else {
                 peerConnection.ondatachannel = (event) => { 
                     dataChannel = event.channel; 
                     setupDataChannel(); 
                 };
-                // If an offer arrived before handshake verification finished, handle it now!
                 if (pendingOffer) {
                     await handleOffer(pendingOffer);
                     pendingOffer = null;
@@ -438,7 +530,7 @@
                 await peerConnection.setLocalDescription(offer);
                 socket.emit('webrtc_signaling', { type: 'offer', offer: peerConnection.localDescription, roomId: sessionRoomId });
             } catch (err) {
-                console.error("Error creating offer:", err);
+                console.error("Offer Error:", err);
             }
         }
 
@@ -450,80 +542,59 @@
                 await peerConnection.setLocalDescription(answer);
                 socket.emit('webrtc_signaling', { type: 'answer', answer: peerConnection.localDescription, roomId: sessionRoomId });
             } catch (err) {
-                console.error("Error handling offer:", err);
+                console.error("Answer Error:", err);
             }
         }
 
-        // 🔥 PERFECT ASYNCHRONOUS SIGNALING & BUFFERING 🔥
         socket.on('webrtc_signaling', async (data) => {
             if (!sessionRoomId || data.roomId !== sessionRoomId) return;
 
             try {
-                if (data.type === 'peer_ready') {
-                    isPeerReady = true;
-                    // When initiator knows receiver is ready, kickstart the connection!
-                    if (isInitiator && peerConnection) {
-                        await makeOffer();
-                    }
-                    return;
-                }
-
                 if (data.type === 'offer') {
                     if (!peerConnection) {
-                        // Receiver hasn't completed verifyPrimeConnect yet; buffer it!
                         pendingOffer = data.offer;
                     } else {
                         await handleOffer(data.offer);
                     }
-                    return;
                 } 
-                
-                if (data.type === 'answer') {
+                else if (data.type === 'answer') {
                     if (peerConnection) {
                         await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
                         processPendingCandidates();
                     }
-                    return;
                 } 
-                
-                if (data.type === 'ice') {
+                else if (data.type === 'ice') {
                     if (peerConnection && peerConnection.remoteDescription) {
                         await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
                     } else {
                         pendingCandidates.push(data.candidate); 
                     }
-                    return;
                 }
-
-                if (data.type === 'call_request') {
+                else if (data.type === 'call_request') {
                     currentCallType = data.callType;
                     document.getElementById('call-title').innerText = `Incoming ${data.callType ? 'Video' : 'Voice'} Call...`;
                     document.getElementById('incoming-call-modal').classList.remove('hidden');
-                    return;
                 } 
-                
-                if (data.type === 'call_accepted') {
+                else if (data.type === 'call_accepted') {
                     window.appendMsg("Call Connected.", "system-msg");
                     document.getElementById('video-container').classList.remove('hidden');
                     document.getElementById('advanced-controls').classList.remove('hidden');
                     document.getElementById('switch-cam-btn').style.display = currentCallType ? "flex" : "none";
                     document.getElementById('quality-box').style.display = currentCallType ? "flex" : "none";
-                    if(!localStream) await startMedia(currentCallType);
-                    // Renegotiate streams seamlessly
+                    // Caller now creates the renegotiation offer with tracks
                     await makeOffer();
-                    return;
                 } 
-                
-                if (data.type === 'call_rejected') {
+                else if (data.type === 'call_rejected') {
                     window.appendMsg("Call Declined.", "system-msg");
                     window.endCall(false);
-                    return;
                 } 
-                
-                if (data.type === 'call_ended') {
+                else if (data.type === 'call_ended') {
                     window.endCall(false); 
                     window.appendMsg("Call Ended by peer.", "system-msg");
-                    return;
+                }
+                else if (data.type === 'peer_disconnected') {
+                    window.appendMsg("⚠️ Peer left the tunnel.", "system-msg");
+                    window.endCall(false);
                 }
             } catch (err) {
                 console.error("Signaling Error:", err);
@@ -586,7 +657,7 @@
                 const q = getQualityConstraints();
                 const constraints = { 
                     audio: true, 
-                    video: videoEnabled ? { facingMode: currentFacingMode, width: q.width, frameRate: q.frameRate } : false 
+                    video: videoEnabled ? { facingMode: { ideal: currentFacingMode }, width: q.width, frameRate: q.frameRate } : false 
                 };
                 localStream = await navigator.mediaDevices.getUserMedia(constraints);
                 document.getElementById('local-video').srcObject = localStream;
@@ -603,7 +674,7 @@
                 });
                 return true;
             } catch (err) { 
-                alert("Camera/Mic Permission Denied!"); 
+                alert("Camera/Mic Permission Denied or Device Unavailable!"); 
                 return false; 
             }
         }
@@ -612,360 +683,5 @@
             if (!currentCallType || !localStream || localStream.getVideoTracks().length === 0) return;
             const q = getQualityConstraints();
             try {
-                const newStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: currentFacingMode, width: q.width, frameRate: q.frameRate }});
-                const newVideoTrack = newStream.getVideoTracks()[0];
-                const sender = peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
-                if (sender) {
-                    await sender.replaceTrack(newVideoTrack);
-                    const parameters = sender.getParameters();
-                    if (!parameters.encodings) parameters.encodings = [{}];
-                    parameters.encodings[0].maxBitrate = q.bitrate; 
-                    sender.setParameters(parameters).catch(e => console.error(e));
-                }
-                const oldTrack = localStream.getVideoTracks()[0];
-                localStream.removeTrack(oldTrack); 
-                oldTrack.stop(); 
-                localStream.addTrack(newVideoTrack); 
-                document.getElementById('local-video').srcObject = localStream; 
-                applyMirrorLogic(); 
-            } catch (err) {
-                console.error(err);
-            }
-        };
-
-        window.switchCamera = function() { 
-            if(!localStream || localStream.getVideoTracks().length === 0) return alert("No camera to switch!");
-            currentFacingMode = (currentFacingMode === 'user') ? 'environment' : 'user';
-            window.changeQuality(); 
-        };
-
-        window.endCall = function(emitSignal = true) {
-            if(localStream) { 
-                localStream.getTracks().forEach(track => track.stop()); 
-                localStream = null; 
-            }
-            // 🔥 Clean senders to prevent dead track corruptions on next call
-            if(peerConnection) {
-                peerConnection.getSenders().forEach(sender => {
-                    if (sender.track) {
-                        try { peerConnection.removeTrack(sender); } catch(e) {}
-                    }
-                });
-            }
-            document.getElementById('remote-video').srcObject = null;
-            document.getElementById('local-video').srcObject = null;
-            document.getElementById('video-container').classList.add('hidden');
-            document.getElementById('advanced-controls').classList.add('hidden'); 
-            isMuted = false;
-            document.getElementById('mute-btn').innerText = "🎤 Unmuted"; 
-            document.getElementById('mute-btn').style.background = "rgba(255,255,255,0.2)";
-            document.getElementById('vol-slider').value = 1;
-            if(emitSignal) { 
-                socket.emit('webrtc_signaling', { type: 'call_ended', roomId: sessionRoomId }); 
-                window.appendMsg("You ended the call.", 'system-msg'); 
-            }
-        };
-
-        window.toggleMute = function() {
-            if(localStream && localStream.getAudioTracks().length > 0) {
-                isMuted = !isMuted; 
-                localStream.getAudioTracks()[0].enabled = !isMuted; 
-                const btn = document.getElementById('mute-btn');
-                btn.innerText = isMuted ? "🔇 Muted" : "🎤 Unmuted";
-                btn.style.background = isMuted ? "var(--danger-red)" : "rgba(255,255,255,0.2)";
-                btn.style.borderColor = isMuted ? "var(--danger-red)" : "rgba(255,255,255,0.1)";
-            }
-        };
-
-        window.changeVolume = function(val) { document.getElementById('remote-video').volume = val; };
-
-        // DRAGGABLE PIP
-        const localVidWrapper = document.getElementById('local-video-wrapper');
-        let isDragging = false, startX, startY, currentX = 0, currentY = 0;
-        function dragStart(e) {
-            if(e.type === "touchstart") { startX = e.touches[0].clientX - currentX; startY = e.touches[0].clientY - currentY; } 
-            else { startX = e.clientX - currentX; startY = e.clientY - currentY; }
-            isDragging = true;
-        }
-        function dragEnd() { isDragging = false; }
-        function drag(e) {
-            if(!isDragging) return; e.preventDefault();
-            if(e.type === "touchmove") { currentX = e.touches[0].clientX - startX; currentY = e.touches[0].clientY - startY; } 
-            else { currentX = e.clientX - startX; currentY = e.clientY - startY; }
-            localVidWrapper.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
-        }
-        localVidWrapper.addEventListener('mousedown', dragStart); localVidWrapper.addEventListener('touchstart', dragStart, {passive: false});
-        window.addEventListener('mouseup', dragEnd); window.addEventListener('touchend', dragEnd);
-        window.addEventListener('mousemove', drag); window.addEventListener('touchmove', drag, {passive: false});
-
-        // ==========================================
-        // 💬 DATA CHANNEL & REAL-TIME CHAT
-        // ==========================================
-
-        let isTyping = false, typingTimer, currentReplyContext = null; 
-
-        const msgInput = document.getElementById('msg-input');
-        msgInput.addEventListener('input', () => {
-            if(!dataChannel || dataChannel.readyState !== 'open') return;
-            if(!isTyping) {
-                isTyping = true;
-                dataChannel.send(JSON.stringify({ type: 'typing', state: true }));
-            }
-            clearTimeout(typingTimer);
-            typingTimer = setTimeout(() => {
-                isTyping = false;
-                dataChannel.send(JSON.stringify({ type: 'typing', state: false }));
-            }, 1200);
-        });
-
-        const chatLogs = document.getElementById('chat-logs');
-        let touchStartX = 0, touchStartY = 0;
-        
-        chatLogs.addEventListener('touchstart', e => {
-            touchStartX = e.changedTouches[0].screenX;
-            touchStartY = e.changedTouches[0].screenY;
-        }, {passive: true});
-
-        chatLogs.addEventListener('touchend', e => {
-            let touchEndX = e.changedTouches[0].screenX;
-            let touchEndY = e.changedTouches[0].screenY;
-            if(touchEndX - touchStartX > 50 && Math.abs(touchEndY - touchStartY) < 30) {
-                const msgEl = e.target.closest('.message');
-                if(msgEl && !msgEl.classList.contains('system-msg')) { window.startReply(msgEl); }
-            }
-        });
-
-        chatLogs.addEventListener('dblclick', e => {
-            const msgEl = e.target.closest('.message');
-            if(msgEl && !msgEl.classList.contains('system-msg')) { window.startReply(msgEl); }
-        });
-
-        window.startReply = function(msgEl) {
-            let clone = msgEl.cloneNode(true);
-            const meta = clone.querySelector('.msg-meta');
-            const quoted = clone.querySelector('.quoted-msg');
-            if(meta) meta.remove();
-            if(quoted) quoted.remove();
-
-            let snippet = "";
-            if(clone.querySelector('img')) snippet = "📷 Photo";
-            else if(clone.querySelector('video')) snippet = "🎥 Video";
-            else snippet = clone.innerText.trim();
-
-            if(snippet.length > 40) snippet = snippet.substring(0, 40) + "...";
-
-            currentReplyContext = { id: msgEl.id.replace('msg-', ''), text: snippet };
-            document.getElementById('reply-text').innerText = "Replying to: " + snippet;
-            document.getElementById('reply-preview').classList.remove('hidden');
-            document.getElementById('msg-input').focus();
-        };
-
-        window.cancelReply = function() {
-            currentReplyContext = null;
-            document.getElementById('reply-preview').classList.add('hidden');
-        };
-
-        function setupDataChannel() {
-            dataChannel.onopen = () => {
-                const status = document.getElementById('status-msg');
-                status.innerText = "✅ Military-Grade E2EE Tunnel Active!";
-                status.style.color = "var(--success-green)"; 
-                status.style.border = "none";
-            };
-            dataChannel.onclose = () => window.appendMsg("⚠️ Peer Disconnected.", "system-msg");
-            dataChannel.onmessage = (event) => handleIncomingData(event.data);
-        }
-
-        function generateMsgId() { return Math.random().toString(36).substr(2, 9); }
-
-        window.sendMessage = function() {
-            if(!dataChannel || dataChannel.readyState !== 'open') return alert("Tunnel connecting... Wait for ✅ Green status!");
-            const input = document.getElementById('msg-input');
-            const fileInput = document.getElementById('file-upload');
-            const msgId = generateMsgId(); 
-            
-            clearTimeout(typingTimer);
-            isTyping = false;
-            dataChannel.send(JSON.stringify({ type: 'typing', state: false }));
-
-            const replyData = currentReplyContext;
-
-            if(fileInput.files.length > 0) {
-                const file = fileInput.files[0];
-                const reader = new FileReader();
-                reader.onload = () => {
-                    const base64Data = reader.result;
-                    const totalLength = base64Data.length;
-                    
-                    dataChannel.send(JSON.stringify({ type: 'file-meta', fileType: file.type, msgId: msgId, totalSize: totalLength, replyTo: replyData }));
-                    
-                    const logs = document.getElementById('chat-logs');
-                    logs.insertAdjacentHTML('beforeend', `<div class="message system-msg progress-text" id="progress-send-${msgId}">📤 Sending: 0%</div>`);
-                    logs.scrollTop = logs.scrollHeight;
-
-                    const chunkSize = 16384; 
-                    let offset = 0;
-                    function sendNextChunk() {
-                        const end = Math.min(offset + chunkSize, totalLength);
-                        dataChannel.send(JSON.stringify({ type: 'file-chunk', data: base64Data.slice(offset, end), msgId: msgId }));
-                        offset += chunkSize;
-                        const percent = Math.floor((offset / totalLength) * 100);
-                        const progressEl = document.getElementById(`progress-send-${msgId}`);
-                        if(progressEl) progressEl.innerText = `📤 Sending: ${percent > 100 ? 100 : percent}%`;
-
-                        if (offset < totalLength) { setTimeout(sendNextChunk, 1); } 
-                        else {
-                            dataChannel.send(JSON.stringify({ type: 'file-end', msgId: msgId }));
-                            if(progressEl) progressEl.remove();
-                            window.displayMedia(base64Data, file.type, 'sent-msg', msgId, replyData);
-                        }
-                    }
-                    sendNextChunk();
-                };
-                reader.readAsDataURL(file);
-                fileInput.value = ''; 
-                window.cancelReply(); 
-            }
-            else if(input.value.trim()) {
-                window.appendMsg(input.value.trim(), 'sent-msg', msgId, replyData);
-                dataChannel.send(JSON.stringify({ type: 'text', text: input.value.trim(), msgId: msgId, replyTo: replyData }));
-                input.value = '';
-                window.cancelReply(); 
-            }
-        };
-
-        let incomingBuffer = "", incomingMeta = null, incomingTotalSize = 1;
-        
-        function handleIncomingData(rawData) {
-            try {
-                const parsed = JSON.parse(rawData);
-                
-                if(parsed.type === 'typing') {
-                    const ind = document.getElementById('typing-indicator');
-                    ind.style.display = parsed.state ? 'block' : 'none';
-                    if(parsed.state) {
-                        const logs = document.getElementById('chat-logs');
-                        logs.scrollTop = logs.scrollHeight; 
-                    }
-                }
-                else if(parsed.type === 'text') {
-                    document.getElementById('typing-indicator').style.display = 'none'; 
-                    window.appendMsg(parsed.text, 'recv-msg', parsed.msgId, parsed.replyTo);
-                    dataChannel.send(JSON.stringify({ type: 'seen-ack', msgId: parsed.msgId }));
-                }
-                else if (parsed.type === 'file-meta') { 
-                    document.getElementById('typing-indicator').style.display = 'none';
-                    incomingMeta = parsed; incomingBuffer = ""; incomingTotalSize = parsed.totalSize || 1; 
-                    const logs = document.getElementById('chat-logs');
-                    logs.insertAdjacentHTML('beforeend', `<div class="message system-msg progress-text" id="progress-recv-${parsed.msgId}">📥 Receiving: 0%</div>`);
-                    logs.scrollTop = logs.scrollHeight;
-                }
-                else if (parsed.type === 'file-chunk') { 
-                    incomingBuffer += parsed.data; 
-                    const percent = Math.floor((incomingBuffer.length / incomingTotalSize) * 100);
-                    const progressEl = document.getElementById(`progress-recv-${parsed.msgId}`);
-                    if(progressEl) progressEl.innerText = `📥 Receiving: ${percent > 100 ? 100 : percent}%`;
-                }
-                else if (parsed.type === 'file-end') {
-                    const progressEl = document.getElementById(`progress-recv-${parsed.msgId}`);
-                    if(progressEl) progressEl.remove();
-                    window.displayMedia(incomingBuffer, incomingMeta.fileType, 'recv-msg', parsed.msgId, incomingMeta.replyTo);
-                    dataChannel.send(JSON.stringify({ type: 'seen-ack', msgId: parsed.msgId }));
-                }
-                else if (parsed.type === 'seen-ack') {
-                    const statusEl = document.getElementById(`status-${parsed.msgId}`);
-                    if(statusEl) { statusEl.innerText = "✓✓ Seen"; statusEl.style.color = "var(--success-green)"; }
-                }
-                else if (parsed.type === 'delete-msg') {
-                    const el = document.getElementById(`msg-${parsed.msgId}`);
-                    if(el) el.innerHTML = `<div style="font-style: italic; color: #94a3b8; padding: 5px;">🚫 This message was deleted</div>`;
-                }
-            } catch(e) {
-                console.log("Safe packet drop");
-            }
-        }
-
-        window.appendMsg = function(text, type, msgId = null, replyData = null) {
-            const logs = document.getElementById('chat-logs');
-            if (!msgId && type !== 'system-msg') msgId = generateMsgId();
-            
-            let quoteHtml = '';
-            if (replyData) {
-                quoteHtml = `<div class="quoted-msg" onclick="document.getElementById('msg-${replyData.id}').scrollIntoView({behavior: 'smooth'})">
-                                Replying to: ${replyData.text}
-                             </div>`;
-            }
-
-            let html = quoteHtml + text;
-            if(type === 'sent-msg') {
-                html += `<div class="msg-meta"><span id="status-${msgId}" class="seen-status">✓ Sent</span> <span class="action-btn" onclick="window.deleteMessage('${msgId}', true)">Delete for everyone</span></div>`;
-            } else if (type === 'recv-msg') {
-                html += `<div class="msg-meta"><span class="action-btn" onclick="window.deleteMessage('${msgId}', false)">Delete for me</span></div>`;
-            }
-
-            logs.insertAdjacentHTML('beforeend', `<div class="message ${type}" id="msg-${msgId}">${html}</div>`);
-            logs.scrollTop = logs.scrollHeight;
-        };
-
-        window.displayMedia = function(base64Data, mimeType, type, msgId = null, replyData = null) {
-            const logs = document.getElementById('chat-logs');
-            if (!msgId) msgId = generateMsgId();
-
-            let mediaHtml = '';
-            if (replyData) {
-                mediaHtml += `<div class="quoted-msg" onclick="document.getElementById('msg-${replyData.id}').scrollIntoView({behavior: 'smooth'})">
-                                Replying to: ${replyData.text}
-                             </div>`;
-            }
-
-            if(mimeType.startsWith('image/')) mediaHtml += `<img src="${base64Data}" class="media-content" onclick="window.openModal('${base64Data}')">`;
-            else if(mimeType.startsWith('video/')) mediaHtml += `<video src="${base64Data}" controls class="media-content"></video>`;
-
-            if(type === 'sent-msg') {
-                mediaHtml += `<div class="msg-meta">
-                                <span id="status-${msgId}" class="seen-status">✓ Sent</span> 
-                                <span class="action-btn" onclick="window.downloadMedia('${base64Data}', '${mimeType}')">⬇️ Download</span>
-                                <span class="action-btn" onclick="window.deleteMessage('${msgId}', true)">Delete for everyone</span>
-                              </div>`;
-            } else if (type === 'recv-msg') {
-                mediaHtml += `<div class="msg-meta">
-                                <span class="action-btn" onclick="window.downloadMedia('${base64Data}', '${mimeType}')">⬇️ Download</span> 
-                                <span class="action-btn" onclick="window.deleteMessage('${msgId}', false)">Delete for me</span>
-                              </div>`;
-            }
-
-            logs.insertAdjacentHTML('beforeend', `<div class="message ${type}" id="msg-${msgId}">${mediaHtml}</div>`);
-            logs.scrollTop = logs.scrollHeight;
-        };
-
-        window.deleteMessage = function(msgId, forEveryone) {
-            const el = document.getElementById(`msg-${msgId}`);
-            if(!el) return;
-            if(forEveryone) {
-                el.innerHTML = `<div style="font-style: italic; color: #94a3b8; padding: 5px;">🚫 You deleted this message</div>`;
-                if(dataChannel && dataChannel.readyState === 'open') dataChannel.send(JSON.stringify({ type: 'delete-msg', msgId: msgId }));
-            } else { el.remove(); }
-        };
-
-        window.downloadMedia = function(base64Data, mimeType) {
-            const a = document.createElement('a'); a.href = base64Data;
-            let ext = mimeType.split('/')[1] || 'file'; a.download = `EliteTunnel_Media_${Date.now()}.${ext}`;
-            document.body.appendChild(a); a.click(); document.body.removeChild(a);
-        };
-
-        window.openModal = function(imageSrc) { document.getElementById('image-modal').classList.remove('hidden'); document.getElementById('modal-img').src = imageSrc; };
-        window.closeModal = function() { document.getElementById('image-modal').classList.add('hidden'); };
-        window.checkEnter = function(e) { if(e.key === 'Enter') window.sendMessage(); };
-        
-        window.triggerKillSwitch = function() {
-            document.getElementById('purge-modal').classList.remove('hidden');
-        };
-        window.closePurgeModal = function() {
-            document.getElementById('purge-modal').classList.add('hidden');
-        };
-        window.executeKillSwitch = function() {
-            location.reload(); 
-        };
-    </script>
-</body>
-</html>
+                const newStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: { ideal:
