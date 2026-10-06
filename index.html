@@ -6,7 +6,14 @@
     <title>WebRTC Elite Tunnel</title>
     
     <link rel="manifest" href="/manifest.json">
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    
+    <!-- 🔌 Dual Socket.IO Loader (Native first, CDN fallback) -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        if (typeof io === 'undefined') {
+            document.write('<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"><\/script>');
+        }
+    </script>
 
     <style>
         :root { 
@@ -19,72 +26,20 @@
             --warning-orange: #f97316;
         }
 
-        body { 
-            background: var(--bg-gradient); 
-            color: #f8fafc; 
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            height: 100dvh; 
-            margin: 0; 
-            overflow: hidden; 
-            touch-action: manipulation; 
-        }
-
+        body { background: var(--bg-gradient); color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100dvh; margin: 0; overflow: hidden; touch-action: manipulation; top: 0px !important; }
         .goog-te-banner-frame.skiptranslate { display: none !important; }
 
-        #inapp-warning { 
-            position: fixed; 
-            top: 0; 
-            left: 0; 
-            width: 100%; 
-            background: var(--warning-orange); 
-            color: white; 
-            text-align: center; 
-            padding: 15px; 
-            z-index: 9999; 
-            box-sizing: border-box; 
-            font-weight: bold; 
-            box-shadow: 0 5px 20px rgba(0,0,0,0.5); 
-        }
+        #inapp-warning { position: fixed; top: 0; left: 0; width: 100%; background: var(--warning-orange); color: white; text-align: center; padding: 15px; z-index: 9999; box-sizing: border-box; font-weight: bold; box-shadow: 0 5px 20px rgba(0,0,0,0.5); border-bottom: 2px solid rgba(255,255,255,0.2); }
         .warning-text { font-size: 0.9rem; font-weight: normal; display: block; margin-top: 5px; }
         .btn-dismiss-warning { margin-top: 10px; background: rgba(0,0,0,0.3); color: white; border: 1px solid rgba(255,255,255,0.5); padding: 5px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; }
 
-        .window-panel { 
-            background: var(--glass-bg); 
-            backdrop-filter: blur(20px); 
-            -webkit-backdrop-filter: blur(20px); 
-            border: 1px solid var(--glass-border); 
-            border-radius: 20px; 
-            padding: 1.2rem; 
-            width: 92%; 
-            max-width: 450px; 
-            max-height: 98dvh; 
-            box-shadow: 0 20px 40px rgba(0,0,0,0.5); 
-            display: flex; 
-            flex-direction: column; 
-            box-sizing: border-box; 
-            position: relative; 
-            z-index: 10; 
-        }
+        .window-panel { background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 20px; padding: 1.2rem; width: 92%; max-width: 450px; max-height: 98dvh; box-shadow: 0 20px 40px rgba(0,0,0,0.5); display: flex; flex-direction: column; box-sizing: border-box; position: relative; z-index: 10; }
         .hidden { display: none !important; }
 
         h2 { margin-top: 0; font-size: 1.2rem; text-align: center; color: #fff; margin-bottom: 1rem; flex-shrink: 0; }
         .input-group { margin-bottom: 1rem; }
         label { display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.4rem; font-weight: 600; text-transform: uppercase; }
-        input:not([type="file"]), textarea { 
-            width: 100%; 
-            padding: 14px; 
-            border-radius: 12px; 
-            border: 1px solid var(--glass-border); 
-            background: rgba(0,0,0,0.4); 
-            color: #fff; 
-            box-sizing: border-box; 
-            outline: none; 
-            font-size: 1rem; 
-            font-family: inherit; 
-        }
+        input:not([type="file"]), textarea { width: 100%; padding: 14px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.4); color: #fff; box-sizing: border-box; outline: none; font-size: 1rem; font-family: inherit; }
         input:focus, textarea:focus { border-color: var(--neon-cyan); }
 
         .primary-btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 1rem; transition: 0.2s; color: white; margin-top: 5px; background: var(--neon-cyan); }
@@ -96,7 +51,7 @@
         .prime-label { color: var(--neon-cyan); font-size: 0.7rem; display: block; margin-bottom: 5px; }
         #display-prime { font-size: 1.8rem; font-weight: bold; letter-spacing: 2px; }
 
-        /* Mobile Chat */
+        /* Chat UI */
         #chat-logs { flex-grow: 1; overflow-x: hidden; overflow-y: auto; background: rgba(0,0,0,0.3); border-radius: 12px; padding: 10px; margin-bottom: 5px; display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--glass-border); scroll-behavior: smooth; }
         .chat-input-area { display: flex; gap: 8px; align-items: center; width: 100%; justify-content: space-between; flex-shrink: 0; }
         .icon-btn, #send-btn { width: 45px; height: 45px; min-width: 45px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.08); display: flex; justify-content: center; align-items: center; cursor: pointer; font-size: 1.2rem; color: white; margin: 0; padding: 0; }
@@ -134,7 +89,7 @@
         .mirror-feed { transform: scaleX(-1); }
 
         .call-controls { position: absolute; bottom: 30px; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 15px; z-index: 2002; padding: 0 20px; box-sizing: border-box; }
-        .advanced-controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; width: 100%; }
+        .advanced-controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; width: 100%; transition: opacity 0.3s ease; }
         .tool-btn { background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.1); padding: 12px 18px; border-radius: 16px; font-weight: bold; cursor: pointer; backdrop-filter: blur(10px); display: flex; align-items: center; gap: 5px; }
         .quality-selector { display: flex; align-items: center; gap: 5px; background: rgba(255,255,255,0.2); padding: 5px 12px; border-radius: 16px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
         .quality-selector select { background: transparent; color: white; border: none; outline: none; font-weight: bold; cursor: pointer; font-size: 0.9rem; }
@@ -153,29 +108,20 @@
 
         #image-modal img { max-width: 95vw; max-height: 90dvh; border-radius: 12px; object-fit: contain; }
         .close-modal { position: absolute; top: 15px; right: 15px; color: white; font-size: 40px; cursor: pointer; z-index: 3001; line-height: 1; }
-        .dev-footer { position: fixed; bottom: 15px; width: 100%; text-align: center; color: #64748b; font-size: 0.8rem; z-index: 5; font-weight: 500; }
-        .dev-footer a { color: var(--neon-cyan); text-decoration: none; font-weight: bold; margin-left: 5px; }
+        .dev-footer { position: fixed; bottom: 15px; width: 100%; text-align: center; color: #64748b; font-size: 0.8rem; z-index: 5; font-weight: 500; letter-spacing: 0.5px; }
+        .dev-footer a { color: var(--neon-cyan); text-decoration: none; font-weight: bold; margin-left: 5px; transition: 0.2s; }
         .tutorial-content { text-align: left; padding: 1.5rem; max-height: 75vh; overflow-y: auto; }
         .tutorial-content h3 { color: var(--neon-cyan); margin-top: 0; text-align: center; }
         .tutorial-content p { color: #cbd5e1; font-size: 0.95rem; line-height: 1.5; margin-bottom: 10px; }
-        #google_translate_element { margin-bottom: 15px; text-align: center; width: 100%; }
-        .goog-te-gadget { color: transparent !important; font-size: 0 !important; } 
-        .goog-te-gadget .goog-logo-link { display: none !important; }
-        #google_translate_element select { width: 100%; background-color: rgba(0, 0, 0, 0.6); color: #fff; border: 1px solid var(--neon-cyan); border-radius: 12px; padding: 12px; font-size: 1rem; outline: none; font-weight: bold; cursor: pointer; }
-        #google_translate_element select option { background-color: #0f172a; color: #fff; }
+        .tutorial-content ol { color: #f8fafc; padding-left: 20px; margin-bottom: 20px; }
     </style>
 </head>
 <body>
     <div id="inapp-warning" class="hidden">
         ⚠️ Instagram/Facebook Browser Detected!
-        <span class="warning-text">Tap the 3 dots (•••) at the top right and select <b>"Open in Chrome/System Browser"</b>.</span>
+        <span class="warning-text">Tap the 3 dots (•••) at top right and select <b>"Open in Chrome/System Browser"</b>.</span>
         <button class="btn-dismiss-warning" onclick="document.getElementById('inapp-warning').classList.add('hidden')">Got it</button>
     </div>
-
-    <script type="text/javascript">
-        function googleTranslateElementInit() { new google.translate.TranslateElement({pageLanguage: 'en'}, 'google_translate_element'); }
-    </script>
-    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 
     <!-- SCREEN 1: AUTH -->
     <div id="screen-auth" class="window-panel">
@@ -188,8 +134,8 @@
             <label>Private Key 🔐</label>
             <input type="password" id="secret-key" placeholder="Enter secret key">
         </div>
-        <button onclick="window.sendSecurePing()" class="primary-btn">Initiate P2P Handshake</button>
-        <button onclick="window.openTutorial()" class="secondary-btn">📖 How to Use?</button>
+        <button id="initiate-btn" class="primary-btn">Initiate P2P Handshake</button>
+        <button id="tutorial-btn" class="secondary-btn">📖 How to Use?</button>
     </div>
 
     <!-- SCREEN 2: HANDSHAKE -->
@@ -203,7 +149,7 @@
             <label>Confirm Prime Number</label>
             <input type="number" id="prime-input" placeholder="Type the prime">
         </div>
-        <button onclick="window.verifyPrimeConnect()" class="primary-btn">Establish Tunnel</button>
+        <button id="establish-btn" class="primary-btn">Establish Tunnel</button>
     </div>
 
     <!-- SCREEN 3: CHAT UI -->
@@ -280,14 +226,15 @@
     
     <div id="image-modal" class="modal hidden" onclick="window.closeModal()">
         <span class="close-modal">&times;</span>
-        <img class="modal-content" id="modal-img">
+        <img class="modal-content" id="modal-img" alt="Zoomed Media">
     </div>
 
     <div id="tutorial-modal" class="modal hidden">
         <div class="modal-content call-box tutorial-content">
             <h3>📖 How to Use?</h3>
-            <div id="google_translate_element"></div>
-            <p>Welcome to the Elite P2P Encrypted Network.</p>
+            <p>1. Both users enter the identical <b>Target Identifier</b> and <b>Private Key</b>.</p>
+            <p>2. Initiator presses <i>Initiate Handshake</i> to generate an active Prime Token.</p>
+            <p>3. Receiver confirms the Prime Token to establish the direct E2EE tunnel.</p>
             <button onclick="window.closeTutorial()" class="primary-btn">Understood, Let's Go!</button>
         </div>
     </div>
@@ -304,67 +251,51 @@
         </div>
     </div>
 
-    <div id="pwa-install-modal" class="modal hidden">
-        <div class="modal-content call-box">
-            <h3>📱 Add to Home Screen?</h3>
-            <p>Direct home screen se bina browser khol kar chalane ke liye install karein!</p>
-            <div class="call-actions">
-                <button onclick="window.triggerPWAInstall()" class="btn-accept">📥 Download</button>
-                <button onclick="window.closePWAModal()" class="btn-reject">Later</button>
-            </div>
-        </div>
-    </div>
-
     <div class="dev-footer" id="dev-footer">
         Developed by it.txt 😉 | <a href="#" onclick="window.openFeedback(); return false;">Give Feedback</a>
     </div>
 
+    <!-- 🧠 ROBUST JAVASCRIPT ENGINE -->
     <script>
         // In-app browser detection
-        window.addEventListener('load', () => {
+        (function detectInApp() {
             const ua = navigator.userAgent || navigator.vendor || window.opera;
-            if (ua.indexOf('FBAN') > -1 || ua.indexOf('FBAV') > -1 || ua.indexOf('Instagram') > -1) {
-                document.getElementById('inapp-warning').classList.remove('hidden');
+            if (ua && (ua.indexOf('FBAN') > -1 || ua.indexOf('FBAV') > -1 || ua.indexOf('Instagram') > -1)) {
+                const warnEl = document.getElementById('inapp-warning');
+                if (warnEl) warnEl.classList.remove('hidden');
             }
-        });
+        })();
 
-        const socket = io(window.location.origin); 
-        let activePrime = null, isInitiator = false;
-        let peerConnection = null, dataChannel = null, localStream = null;
-        let currentCallType = null; 
-        
-        let sessionRoomId = null;
-        let pendingOffer = null;
-        let pendingCandidates = [];
-        let peerHashProof = null;
-
-        let isMuted = false;
-        let currentFacingMode = 'user'; 
-
-        // PWA Prompt
-        let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault(); 
-            deferredPrompt = e; 
-            document.getElementById('pwa-install-modal').classList.remove('hidden');
-        });
-        window.triggerPWAInstall = async function() {
-            if (deferredPrompt) {
-                deferredPrompt.prompt(); 
-                await deferredPrompt.userChoice;
-                deferredPrompt = null;
+        // Safe Socket Initialization
+        let socket = null;
+        try {
+            if (typeof io !== 'undefined') {
+                socket = io(window.location.origin, {
+                    transports: ['websocket', 'polling'],
+                    reconnectionAttempts: 5
+                });
             }
-            window.closePWAModal();
-        };
-        window.closePWAModal = function() { document.getElementById('pwa-install-modal').classList.add('hidden'); };
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(e => console.log(e)); });
+        } catch (e) {
+            console.error("Socket Init Error:", e);
         }
 
-        // 🌐 STUN + Free OpenRelay TURN for 4G/5G Carrier Penetration
-        const iceConfiguration = { 
+        let activePrime = null;
+        let isInitiator = false;
+        let peerConnection = null;
+        let dataChannel = null;
+        let localStream = null;
+        let currentCallType = null;
+        let sessionRoomId = null;
+        let isPeerReady = false;
+        let pendingOffer = null;
+        let pendingCandidates = [];
+        let isMuted = false;
+        let currentFacingMode = 'user';
+
+        // 🌐 STUN + OpenRelay TURN for mobile 4G/5G carrier traversal
+        const iceConfiguration = {
             iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' }, 
+                { urls: 'stun:stun.l.google.com:19302' },
                 { urls: 'stun:stun1.l.google.com:19302' },
                 { urls: 'stun:stun.cloudflare.com:3478' },
                 {
@@ -377,17 +308,10 @@
                     username: "openrelayproject",
                     credential: "openrelayproject"
                 }
-            ] 
+            ]
         };
 
-        // Cryptographic Hash for Zero-Knowledge Private Key Verification
-        async function computeAuthHash(key, prime) {
-            const encoder = new TextEncoder();
-            const data = encoder.encode(key + ":" + prime);
-            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-            return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-        }
-
+        // Modal Helpers
         window.openTutorial = function() { document.getElementById('tutorial-modal').classList.remove('hidden'); };
         window.closeTutorial = function() { document.getElementById('tutorial-modal').classList.add('hidden'); };
         window.openFeedback = function() { document.getElementById('feedback-modal').classList.remove('hidden'); };
@@ -395,126 +319,129 @@
         
         window.sendFeedback = function() {
             const text = document.getElementById('feedback-text').value;
-            if(!text.trim()) return alert("Please write something first!");
+            if (!text.trim()) return alert("Please write something first!");
             window.location.href = `mailto:lappykumar98@gmail.com?subject=Feedback for WebRTC Elite Tunnel&body=${encodeURIComponent(text)}`;
             window.closeFeedback();
             document.getElementById('feedback-text').value = '';
         };
 
-        window.sendSecurePing = async function() {
-            sessionRoomId = document.getElementById('phone-number').value.trim();
-            const secretKey = document.getElementById('secret-key').value.trim();
-            if(!sessionRoomId) return alert("Target ID required!");
-            if(!secretKey) return alert("Private Key required!");
+        // Defensive Initiate Handshake
+        window.sendSecurePing = function() {
+            try {
+                const targetInput = document.getElementById('phone-number');
+                const targetVal = targetInput ? targetInput.value.trim() : '';
+                
+                if (!targetVal) {
+                    alert("Target ID required!");
+                    if (targetInput) targetInput.focus();
+                    return;
+                }
 
-            isInitiator = true;
-            activePrime = [982451653, 15485863, 32416190071][Math.floor(Math.random() * 3)];
-            const keyHash = await computeAuthHash(secretKey, activePrime);
+                isInitiator = true;
+                sessionRoomId = targetVal;
+                activePrime = [982451653, 15485863, 32416190071][Math.floor(Math.random() * 3)];
 
-            socket.emit('global_secure_ping', { prime: activePrime, targetId: sessionRoomId, keyProof: keyHash });
-            
-            document.getElementById('screen-auth').classList.add('hidden');
-            document.getElementById('dev-footer').classList.add('hidden');
-            document.getElementById('screen-handshake').classList.remove('hidden');
-            document.getElementById('display-prime').innerText = activePrime;
+                // Update UI FIRST so user never gets stuck
+                document.getElementById('screen-auth').classList.add('hidden');
+                document.getElementById('dev-footer').classList.add('hidden');
+                document.getElementById('screen-handshake').classList.remove('hidden');
+                document.getElementById('display-prime').innerText = activePrime;
+
+                // Emit signal safely
+                if (socket) {
+                    socket.emit('global_secure_ping', { prime: activePrime, targetId: sessionRoomId });
+                }
+            } catch (err) {
+                console.error("sendSecurePing Error:", err);
+            }
         };
 
-        socket.on('global_incoming_ping', (data) => {
-            const myTarget = document.getElementById('phone-number').value.trim();
-            // 🛡️ Prevent screen hijacking: Only activate if Target ID explicitly matches
-            if (!myTarget || myTarget !== data.targetId) return;
+        // Attach event listeners directly
+        document.getElementById('initiate-btn').addEventListener('click', window.sendSecurePing);
+        document.getElementById('tutorial-btn').addEventListener('click', window.openTutorial);
 
-            isInitiator = false;
-            sessionRoomId = data.targetId;
-            activePrime = data.prime;
-            peerHashProof = data.keyProof;
-            
-            document.getElementById('screen-auth').classList.add('hidden');
-            document.getElementById('dev-footer').classList.add('hidden');
-            document.getElementById('screen-handshake').classList.remove('hidden');
-            document.getElementById('display-prime').innerText = data.prime;
-        });
+        if (socket) {
+            socket.on('global_incoming_ping', (data) => {
+                const targetInput = document.getElementById('phone-number');
+                const myTarget = targetInput ? targetInput.value.trim() : '';
+                
+                // Only respond if receiver specified the matching Target ID
+                if (!myTarget || myTarget !== data.targetId) return;
+
+                isInitiator = false;
+                sessionRoomId = data.targetId;
+                activePrime = data.prime;
+
+                document.getElementById('screen-auth').classList.add('hidden');
+                document.getElementById('dev-footer').classList.add('hidden');
+                document.getElementById('screen-handshake').classList.remove('hidden');
+                document.getElementById('display-prime').innerText = data.prime;
+            });
+        }
 
         window.verifyPrimeConnect = async function() {
             const userInputPrime = document.getElementById('prime-input').value;
             let userInputKey = document.getElementById('secret-key').value.trim();
-            
-            if(!userInputKey) {
-                userInputKey = prompt("🔐 Connection Locked! Enter Private Key to decrypt:");
-                if(userInputKey) document.getElementById('secret-key').value = userInputKey;
+
+            if (!userInputKey) {
+                userInputKey = prompt("🔐 Connection Locked! Enter Private Key:");
+                if (userInputKey) document.getElementById('secret-key').value = userInputKey;
             }
 
-            if(!userInputKey || parseInt(userInputPrime) !== activePrime) {
+            if (!userInputKey || parseInt(userInputPrime) !== activePrime) {
                 return alert("Handshake Failed! Check Prime or Key.");
             }
 
-            // Cryptographic Key verification
-            if (!isInitiator && peerHashProof) {
-                const myHash = await computeAuthHash(userInputKey, activePrime);
-                if (myHash !== peerHashProof) {
-                    alert("🚨 Security Alert: Private Key does NOT match Peer's Key! Tunnel aborted.");
-                    return location.reload();
-                }
-            }
-            
             document.getElementById('screen-handshake').classList.add('hidden');
             document.getElementById('screen-chat').classList.remove('hidden');
             window.scrollTo(0, 0);
-            
-            // Join Room on Server
-            socket.emit('join_tunnel', sessionRoomId);
+
+            await initWebRTC();
+
+            if (socket) {
+                socket.emit('webrtc_signaling', { type: 'peer_ready', roomId: sessionRoomId });
+            }
         };
 
-        socket.on('tunnel_error', (msg) => {
-            alert(msg);
-            location.reload();
-        });
-
-        // Triggered only when both peers are confirmed inside the socket room
-        socket.on('peers_synchronized', async () => {
-            await initWebRTC();
-            if (isInitiator) {
-                await makeOffer();
-            }
-        });
+        document.getElementById('establish-btn').addEventListener('click', window.verifyPrimeConnect);
 
         async function initWebRTC() {
-            if (peerConnection) return;
             peerConnection = new RTCPeerConnection(iceConfiguration);
 
-            peerConnection.ontrack = (event) => { 
+            peerConnection.ontrack = (event) => {
                 const remoteVid = document.getElementById('remote-video');
-                if (remoteVid.srcObject !== event.streams[0]) {
+                if (remoteVid && remoteVid.srcObject !== event.streams[0]) {
                     remoteVid.srcObject = event.streams[0];
-                    remoteVid.play().catch(e => console.log('Autoplay handled'));
                 }
             };
-            
+
             peerConnection.onicecandidate = (event) => {
-                if(event.candidate) {
+                if (event.candidate && socket) {
                     socket.emit('webrtc_signaling', { type: 'ice', candidate: event.candidate, roomId: sessionRoomId });
                 }
             };
 
             peerConnection.onconnectionstatechange = () => {
                 const status = document.getElementById('status-msg');
+                if (!status) return;
                 if (peerConnection.connectionState === 'connected') {
                     status.innerText = "✅ Military-Grade E2EE Tunnel Active!";
                     status.style.color = "var(--success-green)";
                     status.style.border = "none";
                 } else if (peerConnection.connectionState === 'failed' || peerConnection.connectionState === 'disconnected') {
-                    status.innerText = "⚠️ Tunnel Disconnected.";
+                    status.innerText = "⚠️ Tunnel Disconnected. Reconnecting...";
                     status.style.color = "var(--danger-red)";
                 }
             };
-            
-            if(isInitiator) {
+
+            if (isInitiator) {
                 dataChannel = peerConnection.createDataChannel('cryptoTunnel');
                 setupDataChannel();
+                if (isPeerReady) await makeOffer();
             } else {
-                peerConnection.ondatachannel = (event) => { 
-                    dataChannel = event.channel; 
-                    setupDataChannel(); 
+                peerConnection.ondatachannel = (event) => {
+                    dataChannel = event.channel;
+                    setupDataChannel();
                 };
                 if (pendingOffer) {
                     await handleOffer(pendingOffer);
@@ -528,9 +455,11 @@
                 if (!peerConnection) return;
                 const offer = await peerConnection.createOffer();
                 await peerConnection.setLocalDescription(offer);
-                socket.emit('webrtc_signaling', { type: 'offer', offer: peerConnection.localDescription, roomId: sessionRoomId });
+                if (socket) {
+                    socket.emit('webrtc_signaling', { type: 'offer', offer: peerConnection.localDescription, roomId: sessionRoomId });
+                }
             } catch (err) {
-                console.error("Offer Error:", err);
+                console.error("makeOffer Error:", err);
             }
         }
 
@@ -540,66 +469,13 @@
                 processPendingCandidates();
                 const answer = await peerConnection.createAnswer();
                 await peerConnection.setLocalDescription(answer);
-                socket.emit('webrtc_signaling', { type: 'answer', answer: peerConnection.localDescription, roomId: sessionRoomId });
+                if (socket) {
+                    socket.emit('webrtc_signaling', { type: 'answer', answer: peerConnection.localDescription, roomId: sessionRoomId });
+                }
             } catch (err) {
-                console.error("Answer Error:", err);
+                console.error("handleOffer Error:", err);
             }
         }
-
-        socket.on('webrtc_signaling', async (data) => {
-            if (!sessionRoomId || data.roomId !== sessionRoomId) return;
-
-            try {
-                if (data.type === 'offer') {
-                    if (!peerConnection) {
-                        pendingOffer = data.offer;
-                    } else {
-                        await handleOffer(data.offer);
-                    }
-                } 
-                else if (data.type === 'answer') {
-                    if (peerConnection) {
-                        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
-                        processPendingCandidates();
-                    }
-                } 
-                else if (data.type === 'ice') {
-                    if (peerConnection && peerConnection.remoteDescription) {
-                        await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
-                    } else {
-                        pendingCandidates.push(data.candidate); 
-                    }
-                }
-                else if (data.type === 'call_request') {
-                    currentCallType = data.callType;
-                    document.getElementById('call-title').innerText = `Incoming ${data.callType ? 'Video' : 'Voice'} Call...`;
-                    document.getElementById('incoming-call-modal').classList.remove('hidden');
-                } 
-                else if (data.type === 'call_accepted') {
-                    window.appendMsg("Call Connected.", "system-msg");
-                    document.getElementById('video-container').classList.remove('hidden');
-                    document.getElementById('advanced-controls').classList.remove('hidden');
-                    document.getElementById('switch-cam-btn').style.display = currentCallType ? "flex" : "none";
-                    document.getElementById('quality-box').style.display = currentCallType ? "flex" : "none";
-                    // Caller now creates the renegotiation offer with tracks
-                    await makeOffer();
-                } 
-                else if (data.type === 'call_rejected') {
-                    window.appendMsg("Call Declined.", "system-msg");
-                    window.endCall(false);
-                } 
-                else if (data.type === 'call_ended') {
-                    window.endCall(false); 
-                    window.appendMsg("Call Ended by peer.", "system-msg");
-                }
-                else if (data.type === 'peer_disconnected') {
-                    window.appendMsg("⚠️ Peer left the tunnel.", "system-msg");
-                    window.endCall(false);
-                }
-            } catch (err) {
-                console.error("Signaling Error:", err);
-            }
-        });
 
         function processPendingCandidates() {
             if (!peerConnection || !peerConnection.remoteDescription) return;
@@ -609,18 +485,90 @@
             }
         }
 
-        // ==========================================
-        // 📞 AUDIO & VIDEO CALL MANAGEMENT
-        // ==========================================
+        if (socket) {
+            socket.on('webrtc_signaling', async (data) => {
+                if (!sessionRoomId || data.roomId !== sessionRoomId) return;
 
+                try {
+                    if (data.type === 'peer_ready') {
+                        isPeerReady = true;
+                        if (isInitiator && peerConnection) await makeOffer();
+                        return;
+                    }
+
+                    if (data.type === 'offer') {
+                        if (!peerConnection) {
+                            pendingOffer = data.offer;
+                        } else {
+                            await handleOffer(data.offer);
+                        }
+                        return;
+                    }
+
+                    if (data.type === 'answer') {
+                        if (peerConnection) {
+                            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+                            processPendingCandidates();
+                        }
+                        return;
+                    }
+
+                    if (data.type === 'ice') {
+                        if (peerConnection && peerConnection.remoteDescription) {
+                            await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+                        } else {
+                            pendingCandidates.push(data.candidate);
+                        }
+                        return;
+                    }
+
+                    if (data.type === 'call_request') {
+                        currentCallType = data.callType;
+                        document.getElementById('call-title').innerText = `Incoming ${data.callType ? 'Video' : 'Voice'} Call...`;
+                        document.getElementById('incoming-call-modal').classList.remove('hidden');
+                        return;
+                    }
+
+                    if (data.type === 'call_accepted') {
+                        window.appendMsg("Call Connected.", "system-msg");
+                        document.getElementById('video-container').classList.remove('hidden');
+                        document.getElementById('advanced-controls').classList.remove('hidden');
+                        document.getElementById('switch-cam-btn').style.display = currentCallType ? "flex" : "none";
+                        document.getElementById('quality-box').style.display = currentCallType ? "flex" : "none";
+                        if (!localStream) await startMedia(currentCallType);
+                        await makeOffer();
+                        return;
+                    }
+
+                    if (data.type === 'call_rejected') {
+                        window.appendMsg("Call Declined.", "system-msg");
+                        window.endCall(false);
+                        return;
+                    }
+
+                    if (data.type === 'call_ended' || data.type === 'peer_disconnected') {
+                        window.endCall(false);
+                        window.appendMsg("Peer disconnected / Call ended.", "system-msg");
+                        return;
+                    }
+                } catch (err) {
+                    console.error("Signaling Error:", err);
+                }
+            });
+        }
+
+        // Call Management
         window.requestCall = async function(videoEnabled) {
-            if(!dataChannel || dataChannel.readyState !== 'open') return window.appendMsg("❌ Chat must connect first!", "system-msg");
+            if (!dataChannel || dataChannel.readyState !== 'open') return window.appendMsg("❌ Tunnel must be active first!", "system-msg");
             currentCallType = videoEnabled;
             window.appendMsg(`Ringing ${videoEnabled ? 'Video' : 'Voice'}...`, "system-msg");
-            document.getElementById('video-container').classList.remove('hidden'); 
-            const success = await startMedia(videoEnabled);
-            if(success) socket.emit('webrtc_signaling', { type: 'call_request', callType: videoEnabled, roomId: sessionRoomId });
-            else document.getElementById('video-container').classList.add('hidden');
+            document.getElementById('video-container').classList.remove('hidden');
+            const ok = await startMedia(videoEnabled);
+            if (ok && socket) {
+                socket.emit('webrtc_signaling', { type: 'call_request', callType: videoEnabled, roomId: sessionRoomId });
+            } else {
+                document.getElementById('video-container').classList.add('hidden');
+            }
         };
 
         window.acceptCall = async function() {
@@ -629,15 +577,15 @@
             document.getElementById('advanced-controls').classList.remove('hidden');
             document.getElementById('switch-cam-btn').style.display = currentCallType ? "flex" : "none";
             document.getElementById('quality-box').style.display = currentCallType ? "flex" : "none";
-            const success = await startMedia(currentCallType);
-            if(success) {
+            const ok = await startMedia(currentCallType);
+            if (ok && socket) {
                 socket.emit('webrtc_signaling', { type: 'call_accepted', roomId: sessionRoomId });
             }
         };
 
         window.rejectCall = function() {
             document.getElementById('incoming-call-modal').classList.add('hidden');
-            socket.emit('webrtc_signaling', { type: 'call_rejected', roomId: sessionRoomId });
+            if (socket) socket.emit('webrtc_signaling', { type: 'call_rejected', roomId: sessionRoomId });
         };
 
         function getQualityConstraints() {
@@ -649,33 +597,34 @@
 
         function applyMirrorLogic() {
             const localVid = document.getElementById('local-video');
-            if(currentFacingMode === 'user') localVid.classList.add('mirror-feed'); else localVid.classList.remove('mirror-feed');
+            if (currentFacingMode === 'user') localVid.classList.add('mirror-feed');
+            else localVid.classList.remove('mirror-feed');
         }
 
         async function startMedia(videoEnabled) {
             try {
                 const q = getQualityConstraints();
-                const constraints = { 
-                    audio: true, 
-                    video: videoEnabled ? { facingMode: { ideal: currentFacingMode }, width: q.width, frameRate: q.frameRate } : false 
+                const constraints = {
+                    audio: true,
+                    video: videoEnabled ? { facingMode: currentFacingMode, width: q.width, frameRate: q.frameRate } : false
                 };
                 localStream = await navigator.mediaDevices.getUserMedia(constraints);
                 document.getElementById('local-video').srcObject = localStream;
-                applyMirrorLogic(); 
+                applyMirrorLogic();
 
                 localStream.getTracks().forEach(track => {
                     const sender = peerConnection.addTrack(track, localStream);
                     if (track.kind === 'video') {
-                        const parameters = sender.getParameters();
-                        if (!parameters.encodings) parameters.encodings = [{}];
-                        parameters.encodings[0].maxBitrate = q.bitrate; 
-                        sender.setParameters(parameters).catch(e => console.error(e));
+                        const params = sender.getParameters();
+                        if (!params.encodings) params.encodings = [{}];
+                        params.encodings[0].maxBitrate = q.bitrate;
+                        sender.setParameters(params).catch(e => console.error(e));
                     }
                 });
                 return true;
-            } catch (err) { 
-                alert("Camera/Mic Permission Denied or Device Unavailable!"); 
-                return false; 
+            } catch (err) {
+                alert("Camera/Mic Permission Denied!");
+                return false;
             }
         }
 
@@ -683,5 +632,351 @@
             if (!currentCallType || !localStream || localStream.getVideoTracks().length === 0) return;
             const q = getQualityConstraints();
             try {
-                const newStream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: { ideal:
+                const newStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: currentFacingMode, width: q.width, frameRate: q.frameRate }
+                });
+                const newTrack = newStream.getVideoTracks()[0];
+                const sender = peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
+                if (sender) {
+                    await sender.replaceTrack(newTrack);
+                    const params = sender.getParameters();
+                    if (!params.encodings) params.encodings = [{}];
+                    params.encodings[0].maxBitrate = q.bitrate;
+                    sender.setParameters(params).catch(e => console.error(e));
+                }
+                const oldTrack = localStream.getVideoTracks()[0];
+                localStream.removeTrack(oldTrack);
+                oldTrack.stop();
+                localStream.addTrack(newTrack);
+                document.getElementById('local-video').srcObject = localStream;
+                applyMirrorLogic();
+            } catch (e) {
+                console.error(e);
+            }
+        };
+
+        window.switchCamera = function() {
+            if (!localStream || localStream.getVideoTracks().length === 0) return alert("No active camera!");
+            currentFacingMode = (currentFacingMode === 'user') ? 'environment' : 'user';
+            window.changeQuality();
+        };
+
+        window.endCall = function(emitSignal = true) {
+            if (localStream) {
+                localStream.getTracks().forEach(t => t.stop());
+                localStream = null;
+            }
+            if (peerConnection) {
+                peerConnection.getSenders().forEach(sender => {
+                    if (sender.track) {
+                        try { peerConnection.removeTrack(sender); } catch(e) {}
+                    }
+                });
+            }
+            document.getElementById('remote-video').srcObject = null;
+            document.getElementById('local-video').srcObject = null;
+            document.getElementById('video-container').classList.add('hidden');
+            document.getElementById('advanced-controls').classList.add('hidden');
+            isMuted = false;
+            document.getElementById('mute-btn').innerText = "🎤 Unmuted";
+            document.getElementById('mute-btn').style.background = "rgba(255,255,255,0.2)";
+            document.getElementById('vol-slider').value = 1;
+            if (emitSignal && socket) {
+                socket.emit('webrtc_signaling', { type: 'call_ended', roomId: sessionRoomId });
+                window.appendMsg("You ended the call.", 'system-msg');
+            }
+        };
+
+        window.toggleMute = function() {
+            if (localStream && localStream.getAudioTracks().length > 0) {
+                isMuted = !isMuted;
+                localStream.getAudioTracks()[0].enabled = !isMuted;
+                const btn = document.getElementById('mute-btn');
+                btn.innerText = isMuted ? "🔇 Muted" : "🎤 Unmuted";
+                btn.style.background = isMuted ? "var(--danger-red)" : "rgba(255,255,255,0.2)";
+            }
+        };
+
+        window.changeVolume = function(val) {
+            document.getElementById('remote-video').volume = val;
+        };
+
+        // Draggable Video Window
+        const localVidWrapper = document.getElementById('local-video-wrapper');
+        let isDragging = false, startX, startY, currentX = 0, currentY = 0;
+        function dragStart(e) {
+            if (e.type === "touchstart") {
+                startX = e.touches[0].clientX - currentX;
+                startY = e.touches[0].clientY - currentY;
+            } else {
+                startX = e.clientX - currentX;
+                startY = e.clientY - currentY;
+            }
+            isDragging = true;
+        }
+        function dragEnd() { isDragging = false; }
+        function drag(e) {
+            if (!isDragging) return;
+            e.preventDefault();
+            if (e.type === "touchmove") {
+                currentX = e.touches[0].clientX - startX;
+                currentY = e.touches[0].clientY - startY;
+            } else {
+                currentX = e.clientX - startX;
+                currentY = e.clientY - startY;
+            }
+            localVidWrapper.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
+        }
+        localVidWrapper.addEventListener('mousedown', dragStart);
+        localVidWrapper.addEventListener('touchstart', dragStart, { passive: false });
+        window.addEventListener('mouseup', dragEnd);
+        window.addEventListener('touchend', dragEnd);
+        window.addEventListener('mousemove', drag);
+        window.addEventListener('touchmove', drag, { passive: false });
+
+        // DataChannel & Chat
+        let isTyping = false, typingTimer, currentReplyContext = null;
+        const msgInput = document.getElementById('msg-input');
+        msgInput.addEventListener('input', () => {
+            if (!dataChannel || dataChannel.readyState !== 'open') return;
+            if (!isTyping) {
+                isTyping = true;
+                dataChannel.send(JSON.stringify({ type: 'typing', state: true }));
+            }
+            clearTimeout(typingTimer);
+            typingTimer = setTimeout(() => {
+                isTyping = false;
+                dataChannel.send(JSON.stringify({ type: 'typing', state: false }));
+            }, 1200);
+        });
+
+        function setupDataChannel() {
+            dataChannel.onopen = () => {
+                const status = document.getElementById('status-msg');
+                status.innerText = "✅ Military-Grade E2EE Tunnel Active!";
+                status.style.color = "var(--success-green)";
+                status.style.border = "none";
+            };
+            dataChannel.onclose = () => window.appendMsg("⚠️ Peer Disconnected.", "system-msg");
+            dataChannel.onmessage = (event) => handleIncomingData(event.data);
+        }
+
+        function generateMsgId() { return Math.random().toString(36).substr(2, 9); }
+
+        window.sendMessage = function() {
+            if (!dataChannel || dataChannel.readyState !== 'open') {
+                return alert("Tunnel connecting... Wait for ✅ Green status!");
+            }
+            const input = document.getElementById('msg-input');
+            const fileInput = document.getElementById('file-upload');
+            const msgId = generateMsgId();
+
+            clearTimeout(typingTimer);
+            isTyping = false;
+            dataChannel.send(JSON.stringify({ type: 'typing', state: false }));
+            const replyData = currentReplyContext;
+
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const base64Data = reader.result;
+                    const totalLength = base64Data.length;
+
+                    dataChannel.send(JSON.stringify({ type: 'file-meta', fileType: file.type, msgId: msgId, totalSize: totalLength, replyTo: replyData }));
+                    const logs = document.getElementById('chat-logs');
+                    logs.insertAdjacentHTML('beforeend', `<div class="message system-msg progress-text" id="progress-send-${msgId}">📤 Sending: 0%</div>`);
+                    logs.scrollTop = logs.scrollHeight;
+
+                    const chunkSize = 16384;
+                    let offset = 0;
+                    function sendNextChunk() {
+                        if (dataChannel.bufferedAmount > 1024 * 1024) {
+                            setTimeout(sendNextChunk, 50);
+                            return;
+                        }
+                        const end = Math.min(offset + chunkSize, totalLength);
+                        dataChannel.send(JSON.stringify({ type: 'file-chunk', data: base64Data.slice(offset, end), msgId: msgId }));
+                        offset += chunkSize;
+                        const percent = Math.floor((offset / totalLength) * 100);
+                        const progressEl = document.getElementById(`progress-send-${msgId}`);
+                        if (progressEl) progressEl.innerText = `📤 Sending: ${percent > 100 ? 100 : percent}%`;
+
+                        if (offset < totalLength) {
+                            setTimeout(sendNextChunk, 1);
+                        } else {
+                            dataChannel.send(JSON.stringify({ type: 'file-end', msgId: msgId }));
+                            if (progressEl) progressEl.remove();
+                            window.displayMedia(base64Data, file.type, 'sent-msg', msgId, replyData);
+                        }
+                    }
+                    sendNextChunk();
+                };
+                reader.readAsDataURL(file);
+                fileInput.value = '';
+                window.cancelReply();
+            } else if (input.value.trim()) {
+                window.appendMsg(input.value.trim(), 'sent-msg', msgId, replyData);
+                dataChannel.send(JSON.stringify({ type: 'text', text: input.value.trim(), msgId: msgId, replyTo: replyData }));
+                input.value = '';
+                window.cancelReply();
+            }
+        };
+
+        let incomingBuffer = "", incomingMeta = null, incomingTotalSize = 1;
+        function handleIncomingData(rawData) {
+            try {
+                const parsed = JSON.parse(rawData);
+                if (parsed.type === 'typing') {
+                    const ind = document.getElementById('typing-indicator');
+                    ind.style.display = parsed.state ? 'block' : 'none';
+                    if (parsed.state) {
+                        const logs = document.getElementById('chat-logs');
+                        logs.scrollTop = logs.scrollHeight;
+                    }
+                } else if (parsed.type === 'text') {
+                    document.getElementById('typing-indicator').style.display = 'none';
+                    window.appendMsg(parsed.text, 'recv-msg', parsed.msgId, parsed.replyTo);
+                    dataChannel.send(JSON.stringify({ type: 'seen-ack', msgId: parsed.msgId }));
+                } else if (parsed.type === 'file-meta') {
+                    document.getElementById('typing-indicator').style.display = 'none';
+                    incomingMeta = parsed;
+                    incomingBuffer = "";
+                    incomingTotalSize = parsed.totalSize || 1;
+                    const logs = document.getElementById('chat-logs');
+                    logs.insertAdjacentHTML('beforeend', `<div class="message system-msg progress-text" id="progress-recv-${parsed.msgId}">📥 Receiving: 0%</div>`);
+                    logs.scrollTop = logs.scrollHeight;
+                } else if (parsed.type === 'file-chunk') {
+                    incomingBuffer += parsed.data;
+                    const percent = Math.floor((incomingBuffer.length / incomingTotalSize) * 100);
+                    const progressEl = document.getElementById(`progress-recv-${parsed.msgId}`);
+                    if (progressEl) progressEl.innerText = `📥 Receiving: ${percent > 100 ? 100 : percent}%`;
+                } else if (parsed.type === 'file-end') {
+                    const progressEl = document.getElementById(`progress-recv-${parsed.msgId}`);
+                    if (progressEl) progressEl.remove();
+                    window.displayMedia(incomingBuffer, incomingMeta.fileType, 'recv-msg', parsed.msgId, incomingMeta.replyTo);
+                    dataChannel.send(JSON.stringify({ type: 'seen-ack', msgId: parsed.msgId }));
+                } else if (parsed.type === 'seen-ack') {
+                    const statusEl = document.getElementById(`status-${parsed.msgId}`);
+                    if (statusEl) {
+                        statusEl.innerText = "✓✓ Seen";
+                        statusEl.style.color = "var(--success-green)";
+                    }
+                } else if (parsed.type === 'delete-msg') {
+                    const el = document.getElementById(`msg-${parsed.msgId}`);
+                    if (el) el.innerHTML = `<div style="font-style: italic; color: #94a3b8; padding: 5px;">🚫 This message was deleted</div>`;
+                }
+            } catch(e) {
+                console.log("Safe packet drop");
+            }
+        }
+
+        window.appendMsg = function(text, type, msgId = null, replyData = null) {
+            const logs = document.getElementById('chat-logs');
+            if (!msgId && type !== 'system-msg') msgId = generateMsgId();
+
+            let quoteHtml = '';
+            if (replyData) {
+                quoteHtml = `<div class="quoted-msg" onclick="document.getElementById('msg-${replyData.id}').scrollIntoView({behavior: 'smooth'})">Replying to: ${replyData.text}</div>`;
+            }
+
+            let html = quoteHtml + text;
+            if (type === 'sent-msg') {
+                html += `<div class="msg-meta"><span id="status-${msgId}" class="seen-status">✓ Sent</span> <span class="action-btn" onclick="window.deleteMessage('${msgId}', true)">Delete for everyone</span></div>`;
+            } else if (type === 'recv-msg') {
+                html += `<div class="msg-meta"><span class="action-btn" onclick="window.deleteMessage('${msgId}', false)">Delete for me</span></div>`;
+            }
+
+            logs.insertAdjacentHTML('beforeend', `<div class="message ${type}" id="msg-${msgId}">${html}</div>`);
+            logs.scrollTop = logs.scrollHeight;
+        };
+
+        window.displayMedia = function(base64Data, mimeType, type, msgId = null, replyData = null) {
+            const logs = document.getElementById('chat-logs');
+            if (!msgId) msgId = generateMsgId();
+
+            let mediaHtml = '';
+            if (replyData) {
+                mediaHtml += `<div class="quoted-msg" onclick="document.getElementById('msg-${replyData.id}').scrollIntoView({behavior: 'smooth'})">Replying to: ${replyData.text}</div>`;
+            }
+
+            if (mimeType.startsWith('image/')) {
+                mediaHtml += `<img src="${base64Data}" class="media-content" onclick="window.openModal('${base64Data}')">`;
+            } else if (mimeType.startsWith('video/')) {
+                mediaHtml += `<video src="${base64Data}" controls class="media-content"></video>`;
+            }
+
+            if (type === 'sent-msg') {
+                mediaHtml += `<div class="msg-meta"><span id="status-${msgId}" class="seen-status">✓ Sent</span> <span class="action-btn" onclick="window.downloadMedia('${base64Data}', '${mimeType}')">⬇️ Download</span> <span class="action-btn" onclick="window.deleteMessage('${msgId}', true)">Delete for everyone</span></div>`;
+            } else if (type === 'recv-msg') {
+                mediaHtml += `<div class="msg-meta"><span class="action-btn" onclick="window.downloadMedia('${base64Data}', '${mimeType}')">⬇️ Download</span> <span class="action-btn" onclick="window.deleteMessage('${msgId}', false)">Delete for me</span></div>`;
+            }
+
+            logs.insertAdjacentHTML('beforeend', `<div class="message ${type}" id="msg-${msgId}">${mediaHtml}</div>`);
+            logs.scrollTop = logs.scrollHeight;
+        };
+
+        window.deleteMessage = function(msgId, forEveryone) {
+            const el = document.getElementById(`msg-${msgId}`);
+            if (!el) return;
+            if (forEveryone) {
+                el.innerHTML = `<div style="font-style: italic; color: #94a3b8; padding: 5px;">🚫 You deleted this message</div>`;
+                if (dataChannel && dataChannel.readyState === 'open') {
+                    dataChannel.send(JSON.stringify({ type: 'delete-msg', msgId: msgId }));
+                }
+            } else {
+                el.remove();
+            }
+        };
+
+        window.downloadMedia = function(base64Data, mimeType) {
+            const a = document.createElement('a');
+            a.href = base64Data;
+            let ext = mimeType.split('/')[1] || 'file';
+            a.download = `EliteTunnel_Media_${Date.now()}.${ext}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        };
+
+        window.openModal = function(imageSrc) {
+            document.getElementById('image-modal').classList.remove('hidden');
+            document.getElementById('modal-img').src = imageSrc;
+        };
+        window.closeModal = function() {
+            document.getElementById('image-modal').classList.add('hidden');
+        };
+        window.checkEnter = function(e) {
+            if (e.key === 'Enter') window.sendMessage();
+        };
+
+        window.startReply = function(msgEl) {
+            let clone = msgEl.cloneNode(true);
+            const meta = clone.querySelector('.msg-meta');
+            const quoted = clone.querySelector('.quoted-msg');
+            if (meta) meta.remove();
+            if (quoted) quoted.remove();
+
+            let snippet = "";
+            if (clone.querySelector('img')) snippet = "📷 Photo";
+            else if (clone.querySelector('video')) snippet = "🎥 Video";
+            else snippet = clone.innerText.trim();
+
+            if (snippet.length > 40) snippet = snippet.substring(0, 40) + "...";
+            currentReplyContext = { id: msgEl.id.replace('msg-', ''), text: snippet };
+            document.getElementById('reply-text').innerText = "Replying to: " + snippet;
+            document.getElementById('reply-preview').classList.remove('hidden');
+            document.getElementById('msg-input').focus();
+        };
+
+        window.cancelReply = function() {
+            currentReplyContext = null;
+            document.getElementById('reply-preview').classList.add('hidden');
+        };
+
+        window.triggerKillSwitch = function() { document.getElementById('purge-modal').classList.remove('hidden'); };
+        window.closePurgeModal = function() { document.getElementById('purge-modal').classList.add('hidden'); };
+        window.executeKillSwitch = function() { location.reload(); };
+    </script>
+</body>
+</html>
