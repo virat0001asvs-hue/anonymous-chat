@@ -292,24 +292,49 @@
         let isMuted = false;
         let currentFacingMode = 'user';
 
-        // 🌐 STUN + OpenRelay TURN for mobile 4G/5G carrier traversal
-        const iceConfiguration = {
-            iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' },
-                { urls: 'stun:stun.cloudflare.com:3478' },
-                {
-                    urls: "turn:openrelay.metered.ca:80",
-                    username: "openrelayproject",
-                    credential: "openrelayproject"
-                },
-                {
-                    urls: "turn:openrelay.metered.ca:443",
-                    username: "openrelayproject",
-                    credential: "openrelayproject"
+        // 🌐 Fallback STUN + Active Metered TURN Credentials
+        const fallbackIceServers = [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun.cloudflare.com:3478' },
+            { urls: 'stun:stun.relay.metered.ca:80' },
+            {
+                urls: 'turn:global.relay.metered.ca:80',
+                username: '220014b1260ffb9a942df21e',
+                credential: 'op6UCax0DMdO6KS8'
+            },
+            {
+                urls: 'turn:global.relay.metered.ca:80?transport=tcp',
+                username: '220014b1260ffb9a942df21e',
+                credential: 'op6UCax0DMdO6KS8'
+            },
+            {
+                urls: 'turn:global.relay.metered.ca:443',
+                username: '220014b1260ffb9a942df21e',
+                credential: 'op6UCax0DMdO6KS8'
+            },
+            {
+                urls: 'turns:global.relay.metered.ca:443?transport=tcp',
+                username: '220014b1260ffb9a942df21e',
+                credential: 'op6UCax0DMdO6KS8'
+            }
+        ];
+
+        // Fetch Dynamic Metered TURN Server Credentials via REST API
+        async function getIceConfiguration() {
+            try {
+                const response = await fetch("https://randommeet-online.metered.live/api/v1/turn/credentials?apiKey=aa7718e1194092beba118a67ceae5fee9127");
+                if (response.ok) {
+                    const iceServers = await response.json();
+                    if (Array.isArray(iceServers) && iceServers.length > 0) {
+                        return { iceServers: iceServers };
+                    }
                 }
-            ]
-        };
+            } catch (err) {
+                console.warn("Metered API fallback to static TURN credentials:", err);
+            }
+            return { iceServers: fallbackIceServers };
+        }
 
         // Modal Helpers
         window.openTutorial = function() { document.getElementById('tutorial-modal').classList.remove('hidden'); };
@@ -325,7 +350,7 @@
             document.getElementById('feedback-text').value = '';
         };
 
-        // Defensive Initiate Handshake
+        // Initiate Handshake
         window.sendSecurePing = function() {
             try {
                 const targetInput = document.getElementById('phone-number');
@@ -337,17 +362,17 @@
                     return;
                 }
 
-                isInitiator = true;
                 sessionRoomId = targetVal;
-                activePrime = [982451653, 15485863, 32416190071][Math.floor(Math.random() * 3)];
+                if (!activePrime) {
+                    activePrime = [982451653, 15485863, 32416190071][Math.floor(Math.random() * 3)];
+                }
 
-                // Update UI FIRST so user never gets stuck
+                // Show Handshake Screen immediately
                 document.getElementById('screen-auth').classList.add('hidden');
                 document.getElementById('dev-footer').classList.add('hidden');
                 document.getElementById('screen-handshake').classList.remove('hidden');
                 document.getElementById('display-prime').innerText = activePrime;
 
-                // Emit signal safely
                 if (socket) {
                     socket.emit('global_secure_ping', { prime: activePrime, targetId: sessionRoomId });
                 }
@@ -356,19 +381,19 @@
             }
         };
 
-        // Attach event listeners directly
         document.getElementById('initiate-btn').addEventListener('click', window.sendSecurePing);
         document.getElementById('tutorial-btn').addEventListener('click', window.openTutorial);
 
         if (socket) {
             socket.on('global_incoming_ping', (data) => {
+                // Do not interrupt if already in chat screen
+                if (!document.getElementById('screen-chat').classList.contains('hidden')) return;
+
                 const targetInput = document.getElementById('phone-number');
-                const myTarget = targetInput ? targetInput.value.trim() : '';
+                const myTarget = sessionRoomId || (targetInput ? targetInput.value.trim() : '');
                 
-                // Only respond if receiver specified the matching Target ID
                 if (!myTarget || myTarget !== data.targetId) return;
 
-                isInitiator = false;
                 sessionRoomId = data.targetId;
                 activePrime = data.prime;
 
@@ -380,7 +405,7 @@
         }
 
         window.verifyPrimeConnect = async function() {
-            const userInputPrime = document.getElementById('prime-input').value;
+            const userInputPrime = document.getElementById('prime-input').value.trim();
             let userInputKey = document.getElementById('secret-key').value.trim();
 
             if (!userInputKey) {
@@ -388,7 +413,7 @@
                 if (userInputKey) document.getElementById('secret-key').value = userInputKey;
             }
 
-            if (!userInputKey || parseInt(userInputPrime) !== activePrime) {
+            if (!userInputKey || Number(userInputPrime) !== Number(activePrime)) {
                 return alert("Handshake Failed! Check Prime or Key.");
             }
 
@@ -406,7 +431,8 @@
         document.getElementById('establish-btn').addEventListener('click', window.verifyPrimeConnect);
 
         async function initWebRTC() {
-            peerConnection = new RTCPeerConnection(iceConfiguration);
+            const rtcConfig = await getIceConfiguration();
+            peerConnection = new RTCPeerConnection(rtcConfig);
 
             peerConnection.ontrack = (event) => {
                 const remoteVid = document.getElementById('remote-video');
@@ -434,19 +460,14 @@
                 }
             };
 
-            if (isInitiator) {
-                dataChannel = peerConnection.createDataChannel('cryptoTunnel');
+            peerConnection.ondatachannel = (event) => {
+                dataChannel = event.channel;
                 setupDataChannel();
-                if (isPeerReady) await makeOffer();
-            } else {
-                peerConnection.ondatachannel = (event) => {
-                    dataChannel = event.channel;
-                    setupDataChannel();
-                };
-                if (pendingOffer) {
-                    await handleOffer(pendingOffer);
-                    pendingOffer = null;
-                }
+            };
+
+            if (pendingOffer) {
+                await handleOffer(pendingOffer);
+                pendingOffer = null;
             }
         }
 
@@ -490,9 +511,16 @@
                 if (!sessionRoomId || data.roomId !== sessionRoomId) return;
 
                 try {
-                    if (data.type === 'peer_ready') {
+                    if (data.type === 'both_peers_ready') {
                         isPeerReady = true;
-                        if (isInitiator && peerConnection) await makeOffer();
+                        isInitiator = (socket.id === data.initiatorId);
+                        if (isInitiator && peerConnection) {
+                            if (!dataChannel) {
+                                dataChannel = peerConnection.createDataChannel('cryptoTunnel');
+                                setupDataChannel();
+                            }
+                            await makeOffer();
+                        }
                         return;
                     }
 
