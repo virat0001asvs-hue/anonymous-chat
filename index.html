@@ -180,8 +180,8 @@
         <div class="chat-input-area">
             <button onclick="window.requestCall(true)" class="icon-btn" title="Video Call">🎥</button>
             <button onclick="window.requestCall(false)" class="icon-btn" title="Voice Call">📞</button>
-            <label for="file-upload" class="icon-btn" title="Send Any File or Media" style="display:flex;">📎</label>
-            <input type="file" id="file-upload" class="hidden" onchange="window.sendMessage()">
+            <label for="file-upload" class="icon-btn" title="Send Multiple Files or Original Quality Photos" style="display:flex;">📎</label>
+            <input type="file" id="file-upload" class="hidden" multiple onchange="window.sendMessage()">
             <input type="text" id="msg-input" placeholder="Type a message..." onkeypress="window.checkEnter(event)">
             <button id="send-btn" onclick="window.sendMessage()">➤</button>
         </div>
@@ -303,6 +303,13 @@
         let currentFacingMode = 'user';
         const fileVault = {};
 
+        // 📦 Multi-File Lossless Queue & Receiver State
+        let fileSendQueue = [];
+        let isSendingFile = false;
+        let batchTotalCount = 0;
+        let batchCurrentIndex = 0;
+        const incomingTransfers = {};
+
         // 🌐 Fallback STUN + Active Metered TURN Credentials
         const fallbackIceServers = [
             { urls: 'stun:stun.l.google.com:19302' },
@@ -415,7 +422,6 @@
                     activePrime = [982451653, 15485863, 32416190071][Math.floor(Math.random() * 3)];
                 }
 
-                // Show Handshake Screen immediately
                 document.getElementById('screen-auth').classList.add('hidden');
                 document.getElementById('dev-footer').classList.add('hidden');
                 document.getElementById('screen-handshake').classList.remove('hidden');
@@ -838,72 +844,132 @@
 
         function generateMsgId() { return Math.random().toString(36).substr(2, 9); }
 
+        // 🚀 Sequential Lossless File Queue Processor (Supports 50+ Files without RAM/Buffer crash)
+        function processNextFileInQueue() {
+            if (fileSendQueue.length === 0) {
+                isSendingFile = false;
+                batchTotalCount = 0;
+                batchCurrentIndex = 0;
+                return;
+            }
+
+            if (!dataChannel || dataChannel.readyState !== 'open') {
+                fileSendQueue = [];
+                isSendingFile = false;
+                return;
+            }
+
+            isSendingFile = true;
+            batchCurrentIndex++;
+            const currentItem = fileSendQueue.shift();
+            const file = currentItem.file;
+            const replyData = currentItem.replyData;
+            const msgId = generateMsgId();
+
+            const mimeType = file.type || 'application/octet-stream';
+            const fileName = file.name || `File_${Date.now()}`;
+            const fileSize = file.size || 0;
+            const batchLabel = batchTotalCount > 1 ? `(${batchCurrentIndex}/${batchTotalCount}) ` : '';
+
+            // Read exact original bytes (Zero compression, 100% original quality)
+            const reader = new FileReader();
+            reader.onload = () => {
+                const base64Data = reader.result;
+                const totalLength = base64Data.length;
+
+                dataChannel.send(JSON.stringify({
+                    type: 'file-meta',
+                    fileType: mimeType,
+                    fileName: fileName,
+                    fileSize: fileSize,
+                    msgId: msgId,
+                    totalSize: totalLength,
+                    replyTo: replyData
+                }));
+
+                const logs = document.getElementById('chat-logs');
+                logs.insertAdjacentHTML('beforeend', `<div class="message system-msg progress-text" id="progress-send-${msgId}">📤 Sending ${batchLabel}${fileName}: 0%</div>`);
+                logs.scrollTop = logs.scrollHeight;
+
+                const chunkSize = 16384;
+                let offset = 0;
+
+                function sendNextChunk() {
+                    if (!dataChannel || dataChannel.readyState !== 'open') {
+                        isSendingFile = false;
+                        return;
+                    }
+                    // WebRTC DataChannel backpressure protection
+                    if (dataChannel.bufferedAmount > 512 * 1024) {
+                        setTimeout(sendNextChunk, 35);
+                        return;
+                    }
+                    const end = Math.min(offset + chunkSize, totalLength);
+                    dataChannel.send(JSON.stringify({
+                        type: 'file-chunk',
+                        data: base64Data.slice(offset, end),
+                        msgId: msgId
+                    }));
+                    offset += chunkSize;
+                    const percent = Math.min(100, Math.floor((offset / totalLength) * 100));
+                    const progressEl = document.getElementById(`progress-send-${msgId}`);
+                    if (progressEl) progressEl.innerText = `📤 Sending ${batchLabel}${fileName}: ${percent}%`;
+
+                    if (offset < totalLength) {
+                        setTimeout(sendNextChunk, 1);
+                    } else {
+                        dataChannel.send(JSON.stringify({ type: 'file-end', msgId: msgId }));
+                        if (progressEl) progressEl.remove();
+                        window.displayMedia(base64Data, mimeType, 'sent-msg', msgId, replyData, fileName, fileSize);
+                        // Immediately trigger next photo/file in the queue
+                        setTimeout(processNextFileInQueue, 25);
+                    }
+                }
+                sendNextChunk();
+            };
+            reader.onerror = () => {
+                console.error("FileReader error on:", fileName);
+                setTimeout(processNextFileInQueue, 25);
+            };
+            reader.readAsDataURL(file);
+        }
+
         window.sendMessage = function() {
             if (!dataChannel || dataChannel.readyState !== 'open') {
                 return alert("Tunnel connecting... Wait for ✅ Green status!");
             }
             const input = document.getElementById('msg-input');
             const fileInput = document.getElementById('file-upload');
-            const msgId = generateMsgId();
 
             clearTimeout(typingTimer);
             isTyping = false;
             dataChannel.send(JSON.stringify({ type: 'typing', state: false }));
             const replyData = currentReplyContext;
 
-            if (fileInput.files.length > 0) {
-                const file = fileInput.files[0];
-                const mimeType = file.type || 'application/octet-stream';
-                const fileName = file.name || `File_${Date.now()}`;
-                const fileSize = file.size || 0;
+            if (fileInput.files && fileInput.files.length > 0) {
+                const selectedFiles = Array.from(fileInput.files);
+                if (!isSendingFile) {
+                    batchTotalCount = selectedFiles.length;
+                    batchCurrentIndex = 0;
+                } else {
+                    batchTotalCount += selectedFiles.length;
+                }
 
-                const reader = new FileReader();
-                reader.onload = () => {
-                    const base64Data = reader.result;
-                    const totalLength = base64Data.length;
+                selectedFiles.forEach((f, idx) => {
+                    fileSendQueue.push({
+                        file: f,
+                        replyData: idx === 0 ? replyData : null
+                    });
+                });
 
-                    dataChannel.send(JSON.stringify({
-                        type: 'file-meta',
-                        fileType: mimeType,
-                        fileName: fileName,
-                        fileSize: fileSize,
-                        msgId: msgId,
-                        totalSize: totalLength,
-                        replyTo: replyData
-                    }));
-
-                    const logs = document.getElementById('chat-logs');
-                    logs.insertAdjacentHTML('beforeend', `<div class="message system-msg progress-text" id="progress-send-${msgId}">📤 Sending ${fileName}: 0%</div>`);
-                    logs.scrollTop = logs.scrollHeight;
-
-                    const chunkSize = 16384;
-                    let offset = 0;
-                    function sendNextChunk() {
-                        if (dataChannel.bufferedAmount > 1024 * 1024) {
-                            setTimeout(sendNextChunk, 50);
-                            return;
-                        }
-                        const end = Math.min(offset + chunkSize, totalLength);
-                        dataChannel.send(JSON.stringify({ type: 'file-chunk', data: base64Data.slice(offset, end), msgId: msgId }));
-                        offset += chunkSize;
-                        const percent = Math.floor((offset / totalLength) * 100);
-                        const progressEl = document.getElementById(`progress-send-${msgId}`);
-                        if (progressEl) progressEl.innerText = `📤 Sending ${fileName}: ${percent > 100 ? 100 : percent}%`;
-
-                        if (offset < totalLength) {
-                            setTimeout(sendNextChunk, 1);
-                        } else {
-                            dataChannel.send(JSON.stringify({ type: 'file-end', msgId: msgId }));
-                            if (progressEl) progressEl.remove();
-                            window.displayMedia(base64Data, mimeType, 'sent-msg', msgId, replyData, fileName, fileSize);
-                        }
-                    }
-                    sendNextChunk();
-                };
-                reader.readAsDataURL(file);
                 fileInput.value = '';
                 window.cancelReply();
+
+                if (!isSendingFile) {
+                    processNextFileInQueue();
+                }
             } else if (input.value.trim()) {
+                const msgId = generateMsgId();
                 window.appendMsg(input.value.trim(), 'sent-msg', msgId, replyData);
                 dataChannel.send(JSON.stringify({ type: 'text', text: input.value.trim(), msgId: msgId, replyTo: replyData }));
                 input.value = '';
@@ -911,7 +977,6 @@
             }
         };
 
-        let incomingBuffer = "", incomingMeta = null, incomingTotalSize = 1;
         function handleIncomingData(rawData) {
             try {
                 const parsed = JSON.parse(rawData);
@@ -926,181 +991,4 @@
                     document.getElementById('typing-indicator').style.display = 'none';
                     window.appendMsg(parsed.text, 'recv-msg', parsed.msgId, parsed.replyTo);
                     dataChannel.send(JSON.stringify({ type: 'seen-ack', msgId: parsed.msgId }));
-                } else if (parsed.type === 'file-meta') {
-                    document.getElementById('typing-indicator').style.display = 'none';
-                    incomingMeta = parsed;
-                    incomingBuffer = "";
-                    incomingTotalSize = parsed.totalSize || 1;
-                    const labelName = parsed.fileName || 'File';
-                    const logs = document.getElementById('chat-logs');
-                    logs.insertAdjacentHTML('beforeend', `<div class="message system-msg progress-text" id="progress-recv-${parsed.msgId}">📥 Receiving ${labelName}: 0%</div>`);
-                    logs.scrollTop = logs.scrollHeight;
-                } else if (parsed.type === 'file-chunk') {
-                    incomingBuffer += parsed.data;
-                    const percent = Math.floor((incomingBuffer.length / incomingTotalSize) * 100);
-                    const progressEl = document.getElementById(`progress-recv-${parsed.msgId}`);
-                    const labelName = (incomingMeta && incomingMeta.fileName) ? incomingMeta.fileName : 'File';
-                    if (progressEl) progressEl.innerText = `📥 Receiving ${labelName}: ${percent > 100 ? 100 : percent}%`;
-                } else if (parsed.type === 'file-end') {
-                    const progressEl = document.getElementById(`progress-recv-${parsed.msgId}`);
-                    if (progressEl) progressEl.remove();
-                    window.displayMedia(
-                        incomingBuffer,
-                        incomingMeta.fileType || 'application/octet-stream',
-                        'recv-msg',
-                        parsed.msgId,
-                        incomingMeta.replyTo,
-                        incomingMeta.fileName,
-                        incomingMeta.fileSize
-                    );
-                    dataChannel.send(JSON.stringify({ type: 'seen-ack', msgId: parsed.msgId }));
-                } else if (parsed.type === 'seen-ack') {
-                    const statusEl = document.getElementById(`status-${parsed.msgId}`);
-                    if (statusEl) {
-                        statusEl.innerText = "✓✓ Seen";
-                        statusEl.style.color = "var(--success-green)";
-                    }
-                } else if (parsed.type === 'delete-msg') {
-                    delete fileVault[parsed.msgId];
-                    const el = document.getElementById(`msg-${parsed.msgId}`);
-                    if (el) el.innerHTML = `<div style="font-style: italic; color: #94a3b8; padding: 5px;">🚫 This message was deleted</div>`;
                 }
-            } catch(e) {
-                console.log("Safe packet drop");
-            }
-        }
-
-        window.appendMsg = function(text, type, msgId = null, replyData = null) {
-            const logs = document.getElementById('chat-logs');
-            if (!msgId && type !== 'system-msg') msgId = generateMsgId();
-
-            let quoteHtml = '';
-            if (replyData) {
-                quoteHtml = `<div class="quoted-msg" onclick="document.getElementById('msg-${replyData.id}').scrollIntoView({behavior: 'smooth'})">Replying to: ${replyData.text}</div>`;
-            }
-
-            let html = quoteHtml + text;
-            if (type === 'sent-msg') {
-                html += `<div class="msg-meta"><span id="status-${msgId}" class="seen-status">✓ Sent</span> <span class="action-btn" onclick="window.deleteMessage('${msgId}', true)">Delete for everyone</span></div>`;
-            } else if (type === 'recv-msg') {
-                html += `<div class="msg-meta"><span class="action-btn" onclick="window.deleteMessage('${msgId}', false)">Delete for me</span></div>`;
-            }
-
-            logs.insertAdjacentHTML('beforeend', `<div class="message ${type}" id="msg-${msgId}">${html}</div>`);
-            logs.scrollTop = logs.scrollHeight;
-        };
-
-        window.displayMedia = function(base64Data, mimeType, type, msgId = null, replyData = null, fileName = null, fileSize = null) {
-            const logs = document.getElementById('chat-logs');
-            if (!msgId) msgId = generateMsgId();
-
-            const safeMime = mimeType || 'application/octet-stream';
-            const displayFileName = fileName || `EliteTunnel_File_${Date.now()}`;
-            fileVault[msgId] = { base64Data, mimeType: safeMime, fileName: displayFileName };
-
-            let mediaHtml = '';
-            if (replyData) {
-                mediaHtml += `<div class="quoted-msg" onclick="document.getElementById('msg-${replyData.id}').scrollIntoView({behavior: 'smooth'})">Replying to: ${replyData.text}</div>`;
-            }
-
-            if (safeMime.startsWith('image/')) {
-                mediaHtml += `<img src="${base64Data}" class="media-content" onclick="window.openModal('${base64Data}')">`;
-            } else if (safeMime.startsWith('video/')) {
-                mediaHtml += `<video src="${base64Data}" controls class="media-content"></video>`;
-            } else if (safeMime.startsWith('audio/')) {
-                mediaHtml += `<audio src="${base64Data}" controls style="max-width: 100%; margin-top: 5px;"></audio>`;
-            } else {
-                const sizeText = formatFileSize(fileSize);
-                mediaHtml += `
-                    <div class="file-card">
-                        <span class="file-card-icon">📄</span>
-                        <div class="file-card-info">
-                            <span class="file-card-name" title="${displayFileName}">${displayFileName}</span>
-                            ${sizeText ? `<span class="file-card-size">${sizeText}</span>` : ''}
-                        </div>
-                    </div>`;
-            }
-
-            if (type === 'sent-msg') {
-                mediaHtml += `<div class="msg-meta"><span id="status-${msgId}" class="seen-status">✓ Sent</span> <span class="action-btn" onclick="window.downloadById('${msgId}')">⬇️ Download</span> <span class="action-btn" onclick="window.deleteMessage('${msgId}', true)">Delete for everyone</span></div>`;
-            } else if (type === 'recv-msg') {
-                mediaHtml += `<div class="msg-meta"><span class="action-btn" onclick="window.downloadById('${msgId}')">⬇️ Download</span> <span class="action-btn" onclick="window.deleteMessage('${msgId}', false)">Delete for me</span></div>`;
-            }
-
-            logs.insertAdjacentHTML('beforeend', `<div class="message ${type}" id="msg-${msgId}">${mediaHtml}</div>`);
-            logs.scrollTop = logs.scrollHeight;
-        };
-
-        window.downloadById = function(msgId) {
-            const item = fileVault[msgId];
-            if (!item) return;
-            const a = document.createElement('a');
-            a.href = item.base64Data;
-            a.download = item.fileName || `EliteTunnel_File_${Date.now()}`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        };
-
-        window.deleteMessage = function(msgId, forEveryone) {
-            const el = document.getElementById(`msg-${msgId}`);
-            if (!el) return;
-            delete fileVault[msgId];
-            if (forEveryone) {
-                el.innerHTML = `<div style="font-style: italic; color: #94a3b8; padding: 5px;">🚫 You deleted this message</div>`;
-                if (dataChannel && dataChannel.readyState === 'open') {
-                    dataChannel.send(JSON.stringify({ type: 'delete-msg', msgId: msgId }));
-                }
-            } else {
-                el.remove();
-            }
-        };
-
-        window.openModal = function(imageSrc) {
-            document.getElementById('image-modal').classList.remove('hidden');
-            document.getElementById('modal-img').src = imageSrc;
-        };
-        window.closeModal = function() {
-            document.getElementById('image-modal').classList.add('hidden');
-        };
-        window.checkEnter = function(e) {
-            if (e.key === 'Enter') window.sendMessage();
-        };
-
-        window.startReply = function(msgEl) {
-            let clone = msgEl.cloneNode(true);
-            const meta = clone.querySelector('.msg-meta');
-            const quoted = clone.querySelector('.quoted-msg');
-            if (meta) meta.remove();
-            if (quoted) quoted.remove();
-
-            let snippet = "";
-            if (clone.querySelector('img')) snippet = "📷 Photo";
-            else if (clone.querySelector('video')) snippet = "🎥 Video";
-            else if (clone.querySelector('.file-card-name')) snippet = "📄 " + clone.querySelector('.file-card-name').innerText;
-            else snippet = clone.innerText.trim();
-
-            if (snippet.length > 40) snippet = snippet.substring(0, 40) + "...";
-            currentReplyContext = { id: msgEl.id.replace('msg-', ''), text: snippet };
-            document.getElementById('reply-text').innerText = "Replying to: " + snippet;
-            document.getElementById('reply-preview').classList.remove('hidden');
-            document.getElementById('msg-input').focus();
-        };
-
-        window.cancelReply = function() {
-            currentReplyContext = null;
-            document.getElementById('reply-preview').classList.add('hidden');
-        };
-
-        window.triggerKillSwitch = function() { document.getElementById('purge-modal').classList.remove('hidden'); };
-        window.closePurgeModal = function() { document.getElementById('purge-modal').classList.add('hidden'); };
-        window.executeKillSwitch = function() { location.reload(); };
-
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW Error:', err));
-            });
-        }
-    </script>
-</body>
-</html>
